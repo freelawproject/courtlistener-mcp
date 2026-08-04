@@ -42,6 +42,13 @@ def _make_response(status_code, json_body=None, text=""):
     return response
 
 
+def _attach(cl, response):
+    """Wire a response onto the client's HTTP layer, return the mock."""
+    cl._http_client = MagicMock()
+    cl._http_client.request = MagicMock(return_value=response)
+    return cl._http_client.request
+
+
 class TestCourtListenerAPIError:
     def test_json_detail_dict(self, cl):
         body = {"detail": "Authentication credentials were not provided."}
@@ -105,3 +112,40 @@ class TestCourtListenerAPIError:
 
         result = cl._request("GET", "/dockets/1/")
         assert result == {"id": 1}
+
+
+class TestRequestResponseHandling:
+    def test_204_returns_empty_dict(self, cl):
+        """DELETE returns no body; _request must not call .json()."""
+        response = MagicMock(spec=httpx.Response)
+        response.status_code = 204
+        response.raise_for_status = MagicMock()
+        response.json.side_effect = ValueError("No JSON")
+        _attach(cl, response)
+
+        assert cl._request("DELETE", "/alerts/1/") == {}
+
+    def test_absolute_path_is_trimmed_against_base_url(self, cl):
+        """Paginated URLs repeat the base path; the overlap is stripped."""
+        response = MagicMock(spec=httpx.Response)
+        response.status_code = 200
+        response.raise_for_status = MagicMock()
+        response.json.return_value = {"results": []}
+        request = _attach(cl, response)
+
+        cl._request("GET", "/api/rest/v4/dockets/?cursor=abc")
+
+        request.assert_called_once_with("GET", "/dockets/?cursor=abc")
+
+    def test_relative_path_is_left_alone(self, cl):
+        response = MagicMock(spec=httpx.Response)
+        response.status_code = 200
+        response.raise_for_status = MagicMock()
+        response.json.return_value = {"results": []}
+        request = _attach(cl, response)
+
+        cl._request("GET", "/dockets/", params={"court": "scotus"})
+
+        request.assert_called_once_with(
+            "GET", "/dockets/", params={"court": "scotus"}
+        )
