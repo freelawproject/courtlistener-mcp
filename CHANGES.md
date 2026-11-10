@@ -1,0 +1,216 @@
+# Change Log
+
+## Upcoming
+
+The following changes are not yet released, but are code complete:
+
+Features:
+- Add the `wiki_list_pages` and `wiki_read_page` MCP tools alongside `wiki_search`. `wiki_list_pages` lists the wiki pages the user can read, 50 to a page (`page` for more); `wiki_read_page` returns one page as Markdown by its path, its `url`, or a link from page content, in the wiki's `#path` syntax or as `/c/...` (anchors ignored), and points a missing path at an `in:` search in case it's a directory. Every page they return carries a `url`, text comes back with plain `\n` line endings, and a `page` past the end of the list or search results comes back empty instead of repeating the last page. All three share a `WikiTool` base, so each gives the same reconnect message to a sign-in without the wiki scopes, and `WikiToolAccess` hides all of them from excluded clients without keeping its own list of tool names.
+- Add a `wiki_search` MCP tool: full-text search of the Free Law Project wiki pages the user can read, 20 results to a page (`page` for more), each with a `url`. An OAuth sign-in without the `wiki`, `profile` and `email` scopes gets a message asking the user to reconnect the connector instead of a wiki call; API-token and stdio sessions search as the public. A new `WikiToolAccess` middleware (in the new `courtlistener/mcp/middleware.py`) hides the wiki tools from, and refuses their calls for, the legacy clients in `WIKI_TOOLS_EXCLUDED_CLIENTS` (ChatGPT and Gemini Enterprise, which can't request those scopes) and from OAuth sessions whose client can't be identified, so a blocked client never caches a tool list containing them. To support this, access tokens now carry the real MCP client id: from the JWT for tokens this server issued, and from introspection for CourtListener tokens.
+- Add `wiki_get` to the MCP tool helpers: one GET to the Free Law Project wiki's JSON API as the current user. It forwards the user's CourtListener OAuth token as the bearer (API-token callers and stdio mode read as the public) and turns the wiki's 401 and 404 into readable tool errors. `WIKI_BASE_URL` sets the wiki's origin, defaulting to `https://wiki.free.law`. Nothing calls the helper yet; the wiki tools follow in a later release.
+- Track daily active users of the MCP server. Each completed tool call records the caller's user hash in a per-day, per-credential Redis HyperLogLog (`mcp:active:{credential}:{YYYY-MM-DD}`, kept for 60 days), deduplicated per worker process once the write succeeds, so each user costs at most one Redis write per worker a day, and `/metrics` reports the distinct users seen over the trailing 1, 7, and 30 days as `mcp_active_users{window,credential}` gauges computed from Redis at scrape time, since Prometheus counters can't count distinct users. The gauge is omitted from a scrape when Redis is unreachable rather than reporting zeros.
+- Add Prometheus metrics to the MCP server. `/metrics` serves a scrape payload with `mcp_tool_calls_total`, a counter of tool calls labeled by `tool` and a bounded `outcome` that mirrors the Sentry buckets (`ok`, `validation_error`, `session_data_not_found`, `unauthorized`, `rate_limited`, `api_error`, `upstream_error`, `error`), recorded in `MCPTool.run`, so every tool is covered. The container entrypoint sets `PROMETHEUS_MULTIPROC_DIR` and gunicorn runs with a `child_exit` hook, so counts are merged across worker processes instead of reporting whichever worker answered the scrape. The route is unauthenticated like `/health` and is meant to be blocked at the edge.
+- Add `has_more()` to the resource iterators. It reports whether unconsumed results remain on the current page or a next page exists, which the MCP's `get_more_results` and `has_more` hints used to work out by reading the iterator's private page position.
+- Opinion search results and the `cluster_id` mode of `read_document`, `search_document`, and `analyze_citations` now report every opinion in the cluster in `cluster_opinions`, main opinion first, with each one's `type` and authorship (`author`, `author_id`, `joined_by`, `per_curiam`) where the source carries it. This replaces the bare `sibling_opinion_ids` list, so the model can tell a dissent from a concurrence before reading it. No extra API calls: the data comes from the opinion list search already nests and the single `opinions` request the cluster resolution already made. `cluster_opinions` survives `fields` filtering like `opinion_id` does.
+- Add `pray_for_document` and `withdraw_prayer` MCP tools for Pray and Pay. `pray_for_document` first fetches the RECAP document's `is_available` flag and points the model at `read_document` when the PDF is already on CourtListener, since the API accepts (and counts against the daily quota) prayers for available documents. Duplicate, quota, and not-found errors come back as plain messages instead of raw 400s. `withdraw_prayer` deletes the user's pending prayer by RECAP document ID, mirroring `unsubscribe_from_docket_alert`.
+- Add `client.prayers` for the Pray and Pay API: `create(recap_document)` and `delete(id)` map to the endpoint's `POST` and `DELETE`; `list()` and `get()` work as on any other endpoint.
+- Add `client.api_usage` for the API usage endpoint: `get()` returns the authenticated user's live throttle usage per scope and rate (`used`, `limit`, `remaining`, `reset_at`, ...), 14-day daily request history, and membership status. The endpoint has its own throttle scope, so checking usage never spends the quota being checked. It is a single per-user document rather than a paginated list, so `scripts/generate_endpoint_models.py` now skips it instead of emitting an empty endpoint model.
+- Add `get_api_usage` MCP tool. It regroups the endpoint's `current_usage` rows by scope with the main `user` quota first and a plain-language `summary` of it, and describes each scope so the model does not mistake the endpoint's own `api_usage` throttle for the user's API limits. The middleware's 429 message now points at the tool.
+- Accept a CourtListener API token as an MCP credential alongside OAuth, so clients that can't run an interactive OAuth flow (server-to-server backends, scripts) can connect. Send it as `Authorization: Token <api_token>`, the same scheme CourtListener's REST API uses. The scheme selects the credential type and is binding: `Bearer` is verified against OIDC userinfo only and `Token` against the CourtListener API.
+
+Changes:
+- The wiki tools' reconnect message for a sign-in without the wiki scopes is now one line: "Please disconnect and reconnect the CourtListener connector to access the wiki." It no longer lists the missing scopes or the uninstall fallback, which confused more than it helped.
+- The MCP server's 401 challenge now asks clients for every configured scope (`COURTLISTENER_OAUTH_SCOPES`, default `openid api wiki email profile`) instead of just `api`. Clients request exactly the scopes the challenge names and the proxy forwards them to CourtListener verbatim, so new connections were getting tokens without `openid`, `wiki`, `email` or `profile`, which the wiki tools need. The gate still requires only `api`, so tokens issued before this change keep working.
+- The MCP endpoint also answers at `/mcp` and `/mcp/` as aliases of the canonical `/`. Microsoft Copilot Studio sends its MCP requests to `<origin>/mcp` no matter what server URL it was given — FastMCP's default mount, assumed as a convention — so against this server its tool loading failed with a 404 right after a successful OAuth flow. The aliases are rewritten to `/` before routing, so auth, CORS, and transport behavior are identical on both paths; every other path still 404s, and `/` remains the documented URL.
+- Search's `court` filter now explains invented district numbers. Models append districts to state intermediate appellate court IDs (`texapp1`, `fladistctapp3`, `lactapp5`), which CourtListener models as one statewide ID each. The filter description says so, and the invalid-choice error for any such value now names the bare ID and says it has no numbered subdivisions, so the model's retry is informed rather than a guess at the next district. The value is still rejected; nothing is rewritten.
+- `scripts/generate_endpoint_models.py` no longer looks up `name` and `description` on the OPTIONS payload, which never carries them; generated output is unchanged.
+- `mcp_tool_calls_total` carries a `credential` label (`oauth` or `api_token`, read from the access token like `mcp_active_users`; stdio counts as `api_token`), so a dashboard can filter tool calls by credential type. Series recorded before this change have no `credential` label, so selecting a specific credential excludes that history.
+- `read_document` and `search_document` now name the resolved document by its input parameter (`opinion_id: 123` or `recap_document_id: 456`) instead of `doc_type`/`doc_id`; `cluster_id` mode returns `cluster_id` plus the resolved `opinion_id`. Models were mirroring `doc_type`/`doc_id` back as arguments, which the input schema rejects. This is an output-shape change for both tools.
+- `MCP_README.md` now lists all 18 MCP tools: new "Document reading" (`read_document`, `search_document`) and "Pray and Pay" (`pray_for_document`, `withdraw_prayer`) tables, plus usage notes on document chunking (8,000-character chunks, 10 per call), `search_document`'s 10-document limit, the 24-hour server-side document cache, and the daily prayer limit.
+- Upgrade FastMCP from 3.4.0 to 4.1.3, which moves the server onto the MCP Python SDK v2 and the sessionless `2026-07-28` protocol era (older clients keep working; the protocol is negotiated per connection). Two behavior changes needed code on our side. FastMCP's route gate now rejects any request without a `Bearer` header before consulting the authenticated user, which would have locked out the `Token` scheme for CourtListener API tokens, so the HTTP app wraps the gate to admit requests the auth backend has already authenticated, with scope enforcement intact. And redirect URI validation is now strict for registered clients where it used to allow everything, which would have broken clients holding CourtListener-issued client ids from before the cutover — those are registered on first use with a placeholder redirect URI only CourtListener knows the real value of — so legacy clients now accept the redirect URI they present, which open DCR would have let them register anyway; clients registered through DCR are held to their registered redirect URIs, a tightening. Three smaller consequences: `/.well-known/openid-configuration` disappeared in FastMCP 4 (its alias registration is no longer reachable from `http_app`), so the proxy serves it again for clients that discover via OpenID Connect; the CORS allowlist admits the `mcp-method` and `mcp-name` routing headers the SDK v2 client sends, so browser-based clients pass preflight; and sentry-sdk's floor rises to 2.64.0, the first release whose MCP integration imports against the SDK v2. Issued tokens, stored OAuth state, and discovery metadata are unchanged across the upgrade, so existing sessions survive it.
+- The OAuth store reads Postgres directly instead of through a Redis cache. A read racing a write could put the replaced value back in the cache for up to 30 minutes, so after a token refresh the server kept presenting the rotated-away CourtListener refresh token, CourtListener refused it, and the client had to sign in again.
+- A CourtListener API token whose user is over their API quota now verifies, since Django REST Framework authenticates before it throttles; the quota error reaches the client through the tool call instead of as `invalid_token`. A 429 without DRF's throttle body still fails verification.
+- The MCP server accepts CourtListener-issued bearer tokens again, verified by introspection, alongside the tokens it issues itself. Clients that registered with CourtListener before it became the authorization server keep working until CourtListener stops issuing to them, instead of failing until their user notices and reconnects.
+- Fix the OAuth store exhausting Postgres connections: each worker process now opens at most `PGPOOL_MAX` connections (default 4) instead of asyncpg's default pool of ten.
+- The MCP server is now its own OAuth 2.1 authorization server, built on FastMCP's `OAuthProxy`, with CourtListener as the identity provider behind it. MCP clients register with the server, authorize through it, and receive tokens it issues; the server logs the user in at CourtListener with its own confidential application, keeps the CourtListener tokens in the OAuth store, and refreshes them itself. On each request it validates its own token locally and introspects the CourtListener token it holds. The `Token` scheme for CourtListener API tokens is unchanged. Existing connections hold CourtListener-issued tokens the server no longer accepts, so every client re-registers and the user signs in once more. `COURTLISTENER_OAUTH_SCOPES` sets the scopes requested from CourtListener (default `openid api wiki email profile`, so the one re-login also covers the wiki), and `MCP_JWT_SIGNING_KEY` signs the issued tokens, derived from `MCP_SECRET_KEY` when unset. Clients still presenting a client id CourtListener issued before the cutover are registered on first use, so their authorize request proceeds to CourtListener's login rather than failing as an unknown client. Two Prometheus counters track the transition: `mcp_oauth_registrations_total` by `source` (`dcr`, `legacy`) and `mcp_auth_rejections_total` by `scheme` and `issuer` (`mcp` for this server's own tokens, `courtlistener` for CourtListener-issued ones). The hand-written protected-resource metadata route is gone; FastMCP serves both discovery documents.
+- Verify MCP OAuth bearer tokens by RFC 7662 introspection at CourtListener's `/o/introspect/`, authenticated with the server's own client credentials, instead of calling `/o/userinfo/` with the user's token. Introspection reports the token's scopes and expiry, so the `api` scope is now enforced at the door (`openid` is no longer required), the token's `expires_at` reaches the auth middleware, and the verification cache is capped at the token's remaining lifetime. The user hash still derives from the OIDC `sub`, which CourtListener's introspection response includes, so users keep their identities and session state. `COURTLISTENER_OAUTH_USERINFO_URL` is gone; `COURTLISTENER_OAUTH_INTROSPECTION_URL` overrides the introspection endpoint.
+- Add the MCP server's OAuth store: `courtlistener.mcp.storage` builds a key-value store of Fernet-encrypted rows in Postgres read through a Redis cache (Redis-only and in-memory fallbacks when those aren't configured), and `python -m courtlistener.mcp.storage init` has the library create its `kv_store` table when it is missing, retrying while Postgres is still coming up and when concurrently starting pods collide. The container entrypoint runs it before the server starts whenever `PGHOST` is set (a failure there is logged, not fatal, so the pod still comes up and reports it), the workers never create schema themselves, and `/health` probes the store and reports the result under `config.oauth_store`, next to `oauth_client` and likewise without affecting `status`. Nothing reads or writes the store yet; the OAuth authorization server that will is coming in follow-up PRs. `MCP_STORAGE_ENCRYPTION_KEY` is derived from `MCP_SECRET_KEY` when unset.
+- The MCP server reads the credentials of its own CourtListener OAuth application from `COURTLISTENER_OAUTH_CLIENT_ID` and `COURTLISTENER_OAUTH_CLIENT_SECRET`, and `/health` reports whether both are set under a new `config.oauth_client` field that does not affect `status`. The Postgres connection components (`PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`) are now settings of the same names, passed to asyncpg explicitly rather than read from the environment implicitly.
+- The dev compose stack now includes a `postgres` service for the MCP server's OAuth token store, and the server reads Postgres settings from libpq-style component variables (`PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`) instead of a `DATABASE_URL`. asyncpg reads them natively, so passwords need no URL encoding, which is how a raw `%` in a connection-string password produced `InvalidPasswordError` in production. The dev stack hardcodes its own values, so a fresh checkout needs nothing in `.env` and a `PGHOST` exported in the shell cannot leak in. When `PGHOST` is set, `/health` pings Postgres and reports it under `services` next to `redis`, so a dead token store makes the pod unhealthy.
+- `call_endpoint`'s `query` description now says result count is the top-level `num_results` argument, not `page_size` or `num_results` inside `query`. Models were guessing DRF-style pagination params in `query`.
+- Remove the "color-coded visual cards" presentation guidance from the `search` tool description. It was UI advice, not API documentation, and its `absolute_url` nudge had models pasting URLs where IDs are expected. The description now says only that `absolute_url` is relative and that IDs, not URLs, should be passed to other tools.
+- Make semantic search discoverable. Search's `semantic` and `q` filters now have descriptions: `semantic` explains when embedding-based opinion search beats keyword matching, and `q` shows Lucene syntax with an example. The global instructions gain a short "Keyword vs. semantic search" section. Before, both were bare parameters and models defaulted to keyword search.
+- `read_document` no longer errors on a `chunk_index` past the end of the document. It returns `total_chunks` and a `note` instead of text, and a list of indexes keeps its in-range chunks. Models paginating past the end, or reusing an index from another document, were hitting retry loops and filling Sentry.
+- Search `type` now defaults to `o` (Opinion) in the endpoint model and the `search` tool schema, and the tool no longer requires it. The client already fell back to `o` at runtime, but the schema showed no default, so models had to guess. `generate_endpoint_models.py` now supports a `default` on filters.
+- Bind the dev compose file's published MCP port (`8080`) to `127.0.0.1` instead of all interfaces, so a dev machine no longer exposes it to its network. Host-side `localhost:8080` and container-to-container traffic are unaffected.
+- The client's helper accessors (`alerts`, `docket_alerts`, `prayers`, `citation_lookup`) are now plain attributes set in `__init__` instead of lazy properties with inline imports. The helpers only import the client under `TYPE_CHECKING`, so there was no import cycle to defer around, and constructing them is free.
+- The MCP server now uses `AsyncCourtListener` for all tool calls. The sync client inside async tool handlers blocked the worker's event loop, so concurrent tool calls serialized per worker and produced burst client-disconnect noise under load. All tools, the shared tool helpers (`collect_results`, `has_more_results`, `resolve_cluster_opinion_ids`, ...), and the session-store signatures now run on the async client end to end.
+- Generate the sync client from the async one: `courtlistener/async_client/` is now the handwritten source of truth, and `courtlistener/sync_client/` is generated from it with unasync by the new `scripts/generate_sync_client.py` script. Like the generated docs and endpoint models, CI regenerates the sync client and fails if the checked-in copy is stale. The generated code is API-identical to the old handwritten sync client, including the deprecated `ResourceIterator` property aliases, which the generator injects since they exist only in the sync flavor.
+- Add a PR template with an AI Disclosure section.
+- Flatten the generated docs tree: endpoint docs move from `docs/api/endpoints/` to `docs/endpoints/`, MCP tool docs from `docs/mcp/tools/` to `docs/mcp_tools/`, and the cached HTTP OPTIONS dump from `docs/api/http_options.json` to `docs/http_options.json`. The `docs/api/` and `docs/mcp/` folders and their stub READMEs are gone.
+- Rename the generator scripts for consistency: `generate_models.py` → `generate_endpoint_models.py`, `update_endpoint_docs.py` → `generate_endpoint_docs.py`, and `update_tool_docs.py` → `generate_mcp_tool_docs.py`.
+- Remove `MCP_REQUIRE_OAUTH`. The HTTP server now always authenticates — the auth provider accepts both OAuth bearer tokens and CL API tokens, so an auth-off HTTP mode no longer has a purpose, and the flag's fail-open parsing (any value other than exactly `"true"` silently disabled auth) goes with it. The `Authorization: Token` header pass-through in `MCPTool.get_client` is removed as dead code; stdio mode still resolves its credential from `COURTLISTENER_API_TOKEN`.
+- Add `courtlistener/settings.py` with `get_api_base_url()`, now the single source of truth for the CourtListener API root.
+- Cache a structured record of each verified token instead of a bare user hash, keyed by credential kind (`mcp:token_info:{kind}:{hmac}`), so an entry verified as one kind can never satisfy a lookup for another. Entries under the old `mcp:token_to_user:` namespace are ignored and re-verified once.
+- Token verification degrades to direct verification when the session store is unavailable, instead of turning a Redis blip into a 500 on every request.
+- The Redis session backend now treats connection-level failures (DNS blips, dropped connections, timeouts) as cache misses for all session state, not just token verification: reads miss, writes and deletes skip. A blip mid-tool-call now surfaces as a "session may have expired, redo the query" message at worst instead of an unhandled error. Each swallowed failure is logged at error level, so the events still reach Sentry as one grouped issue that escalates during a real outage rather than hiding behind the fallback. With the backend owning that policy, `resolve_token` carries no guards of its own anymore; command-level Redis errors and corrupt cache entries are bugs and raise.
+- Add `verify_api_token`, which validates a CourtListener API token against the API root and namespaces it by an HMAC of the token — the same namespace stdio mode already derives.
+- Tools that only make CL API calls have been changed to have `openWorldHint=False`.
+- Remove `comma_separated_pre_validator`, now redundant as `multiple_choice_validator` already splits on commas and whitespace, and splitting up front broke choice labels containing a comma (`"District Court, D. Alaska"`).
+- Register the MCP tools with FastMCP natively instead of intercepting `tools/list` and `tools/call` in `ToolHandlerMiddleware`. `MCPTool` is now a FastMCP `Tool` subclass whose schema, description, and annotations are set once at construction; `MCPTool.run` validates the arguments, runs the tool body (`call`, formerly `__call__`, which no longer takes a `Context`), translates CourtListener errors, and serializes the result, so FastMCP's own dispatch and error handling apply. Typed tool errors reach the client unchanged; other exceptions now arrive as `Error calling tool '<name>': <message>` instead of the bare message. Expected failures (argument validation, rate limits, stale session ids) declare an info or warning FastMCP log level so they don't log as errors on every call. The middleware is gone, and with it the `ResponseCachingMiddleware`, which was registered behind the interceptor and never ran; had it, its defaults would have cached `get_more_results` and the mutation tools per token for an hour. The `key_value` Redis store that fed it (and FastMCP's unused session-state store) goes too, removing a dependency the `mcp` extra never declared; `/health` now pings the session store's own Redis client.
+- The MCP session store's user-scoped methods (`get_query`/`store_query`, `get_citation_analysis`/`store_citation_analysis`) no longer take an `AsyncCourtListener`. The client was only there so `user_hash()` could read a credential off it; `user_key()` now resolves the per-user prefix from the request (the access token's `user_hash` claim, else an HMAC of the credential, with stdio hashing `COURTLISTENER_API_TOKEN`). Key formats are unchanged, so existing Redis entries stay valid.
+- `get_choices` now takes only `field_name`, from a fixed list of the fields whose choice lists are too long to enumerate in a schema (`court`, docket `source`, `position_type`, and the `dob_state`/`dod_state`/`location_state` state lists); `endpoint_id` is gone. Which lists count as long is the hand-curated `LONG_CHOICE_FIELDS` instead of a token-count threshold applied at schema-build time, with a test that fails when the API grows a long list nobody has decided about. Every other choice field, including each endpoint's `fields` list in `get_endpoint_schema`, is enumerated in full. `search` is no longer an `endpoint_id` anywhere, and the `endpoint_id` descriptions on `get_endpoint_schema`, `get_endpoint_item` and `call_endpoint` now say so and point at the `search` tool. Models were carrying `endpoint_id="search"` from the `get_choices` pointer over to the other endpoint tools, and calling `get_choices` without an `endpoint_id` at all.
+- The `search` MCP tool now accepts `query` as an alias for `q`, and `search_document` accepts `q` as an alias for `query`, since models routinely swap the two (the largest validation-error cluster in Sentry). Aliases are renamed before schema validation via a new `MCPTool.argument_aliases` mapping and are not advertised in the published schemas. Passing both names with different values is rejected rather than guessed at.
+
+Fix:
+- The Redis session client now sets `socket_timeout` and `socket_connect_timeout` (5 seconds each) instead of redis-py's default of none, so a hung Redis socket surfaces as a `TimeoutError` that degrades to a cache miss like a connection error does, rather than stalling token cache reads, `/health`, and `/metrics` indefinitely.
+- The Sentry `before_send` hook now drops FastMCP's message-only `Error calling tool '<name>'` log events from `fastmcp.server.server`. Typed tool errors such as fresh-token 401s and upstream 5xx are logged without an exception, so each one produced a bare log event alongside the exception event already fingerprinted and grouped, doubling the count of every such issue.
+- String-typed endpoint fields now accept numbers and send them as strings, so `document_number=1` on `recap_documents` (or `docket_number=123` on `dockets`) validates instead of failing with "Input should be a valid string". Set via `coerce_numbers_to_str` on the base `Endpoint` model and the generated lookup models, so `{"startswith": 123}` works too; int-typed fields and choices are unchanged, and booleans are still rejected.
+- Fix `range` lookups (e.g. `date_filed__range=["2020-01-01", "2020-12-31"]`) being sent as repeated query params, which CourtListener rejected with "Range query expects two values." They are now joined into one comma-separated value. Affects every `range` lookup on every endpoint.
+- Fix MCP arguments sent as JSON-encoded strings (e.g. `fields='["id", "full_name"]'`, `opinion_id='[1, 2]'`, `chunk_index='5'`) being rejected or, for `search`'s `fields`, silently mangled into bogus field names. `MCPTool.run` now decodes a string argument when the decoded value fits the argument's schema: containers are always decoded, scalars only when the raw string is invalid.
+- Fix integral floats in MCP integer arguments (e.g. `opinion_id=217512.0`, `chunk_index=[1.0, 2.0]`) reaching tool bodies as floats, since jsonschema accepts `1.0` as an integer. They broke `read_document`'s chunk slicing with a `TypeError` and landed in API URLs as `217512.0`. `MCPTool.run` now converts them to `int` wherever the argument's schema, or its array items, allow `integer` but not `number`, including values decoded from JSON strings (`chunk_index='5.0'`). Non-integral floats like `1.5` are still rejected.
+- Invalid-choice errors now name only the bad entries (`Invalid value 'not_a_field' in 'id,not_a_field' for fields`) instead of quoting the whole input, report every bad list entry instead of just the first, and flag filter names requested as return fields (`` `docket_entry` is a filter on this endpoint, not a returnable field``).
+- Fix `generate_models.py` dropping `filter_class` 0.
+- Fix search's `court` filter mislabeled as `MultipleChoiceFilter` when should be `MultipleChoiceStringFilter`.
+
+### 1.2.0 - 2026-08-04
+
+Features:
+- Add support for cluster_id in search_document, read_document, and analyze_citations tools.
+- Add support for space or comma-separated values for multiple-choice fields and `fields` field.
+- Add support for related fields that don't have a schema.
+- Add near-miss suggestions to invalid-choice errors.
+- Better response when a model uses `get_choices` tool on a non-choice field.
+- Add `AsyncCourtListener` client for asynchronous API operations.
+
+Changes:
+- Improve global prompt to clarify that cluster_id is a separate id-space from opinion_id.
+- Add terms and privacy policy to index.html.
+- Tag `ValidationError` and `ToolArgumentValidationError` errors by model or tool for Sentry.
+- Tag `UnauthorizedToolError` errors by tool for Sentry.
+- Key upstream CourtListener failures (5xx and transport errors) by status for Sentry, tagged by tool and status.
+- Raise `ToolArgumentValidationError` for in-tool argument guards so they share the tool-argument Sentry issue.
+- Add `InvalidFieldsError` for invalid `fields` requests, mapped to `ToolArgumentValidationError` in the MCP middleware.
+- Add `SessionDataNotFoundError` for stale query/job ids, keyed as its own Sentry issue so spikes surface session-store problems.
+- Exempt routine token rotation errors from Sentry.
+- Add `idempotentHint` to all MCP tool annotations.
+- Move API client to `sync_client` module. All previously top-level names remain importable from `courtlistener`, alongside their async counterparts.
+- Deprecate the `ResourceIterator` properties `current_page`, `count`, `document_count`, and `results` in favor of `get_current_page()`, `get_count()`, `get_document_count()`, and `get_results()`. The properties still work but emit a `DeprecationWarning`; the methods have awaitable analogues on `AsyncResourceIterator`.
+- Test against Python 3.10 through 3.13 in CI.
+
+Fixes:
+- Handle json_schema_extra when it exists but is None.
+
+### 1.1.0 - 2026-07-21
+
+Features:
+- Integrate Sentry error reporting in the HTTP MCP server via `sentry-sdk`'s `MCPIntegration`. Configured by the optional `SENTRY_DSN` env var; leaving it unset keeps the SDK in no-op mode so local/dev runs are unaffected.
+- Add `search_document` tool for searching for snippets within one or more court opinions or RECAP documents.
+- Add generated documentation for API endpoints and MCP tools.
+- Add mypy workflow, documentation check, and API check to CI.
+- Added in-memory session support for MCP server.
+
+Changes:
+- Validate tool arguments against each tool's advertised input schema in `ToolHandlerMiddleware`.
+- Add `SentryExemptToolError` for tool errors triaged as known noise, dropped from Sentry reporting via a `before_send` hook.
+- Add fallback handling for HTTP errors in MCP tool handler middleware.
+- Add error message for rate limit exceeded errors.
+- Add `SENTRY_TRACES_SAMPLE_RATE` env var to control the sample rate for Sentry traces.
+- Make `search_document` tool always return a dict, even for multi-document searches.
+- Add `destructiveHint` to all MCP tool annotations.
+- Add OpenAI Apps domain-verification challenge token to MCP server.
+- Updated to reflect API changes in CourtListener (7/15/2026).
+- Improve endpoint_id and fields arguments and prompts.
+
+Fixes:
+- Catch falsy `SENTRY_DSN` variable.
+- Fix `endpoint_get_schema` tool to inline refs in the schema.
+
+
+### 1.0.0 - 2026-05-11
+
+Features:
+- Serve MCP server icons (favicon at small sizes, full logo at larger sizes) via the FastMCP `icons` metadata, and expose `/favicon.svg` and `/favicon.ico` routes so Google's favicon service can pick up the logo for the directory listing. Also serve a minimal HTML landing page at `GET /` (the MCP transport itself only handles `POST`/`DELETE`, so methods don't collide) — this gives Googlebot something crawlable and includes explicit `<link rel="icon">` tags pointing at the favicon, which is what Google's favicon cache actually keys off.
+- Enable CORS on the HTTP MCP app with `Access-Control-Allow-Origin: *` and the MCP-specific headers (`mcp-protocol-version`, `mcp-session-id`, `Authorization`, `Content-Type`), so browser-based MCP clients (Inspector, Claude.ai OAuth discovery) can complete preflight and send authenticated requests.
+- Extract API token from Authorization header for HTTP MCP server.
+- Add tool annotation hints to MCP tools.
+- Add human-readable titles to all MCP tools via ToolAnnotations.
+- Add factory for HTTP MCP server with Redis session state store.
+- Add Docker Compose configuration for development.
+- Report the image version (Git SHA) on the MCP `/health` endpoint.
+- Add gunicorn as an `mcp` optional dependency for running the MCP server in production.
+- Add Redis session state store to MCP server.
+- Accept OAuth 2.0 bearer tokens in the MCP HTTP transport (gated on
+  `MCP_REQUIRE_OAUTH`) and forward them to the CourtListener API as
+  `Authorization: Bearer <token>`. Adds an `access_token` parameter
+  to `CourtListener` for Bearer auth. Publishes RFC 9728
+  protected-resource metadata pointing clients at the CourtListener
+  authorization server, but defers token validation itself to CL —
+  the MCP is a thin proxy and CL's OAuth2Authentication is the
+  authoritative check.
+
+Changes:
+- Update pre-commit hooks to latest versions.
+- Refactor MCP server to use FastMCP.
+- Make COURTLISTENER_API_BASE_URL configurable via environment variable.
+- Add CI workflow and Makefile for building and deploying the MCP server.
+- Force use of single worker per pod in production.
+- Switch MCP server to stateless HTTP. Session-scoped tool state (query pagination, citation analysis jobs) is now stored in Redis under per-user keys derived from an HMAC of the API token, so any worker can serve any request. Adds `MCP_SECRET_KEY` for the HMAC key.
+- Verify MCP OAuth tokens against CourtListener's OIDC userinfo endpoint instead of passing them through unchecked, and namespace Redis session state by a stable hash of the resolved `sub` claim rather than the raw access token. Pagination and citation-analysis state now survive access-token rotation, and revoked or invalid tokens produce a proper HTTP 401 with `WWW-Authenticate` so MCP clients re-run OAuth automatically. Downstream 401s from the CourtListener REST API evict the token cache so the next request surfaces the same re-auth signal. Requires the `openid` and `api` scopes, advertised in the protected-resource metadata; adds `MCP_TOKEN_CACHE_TTL` (seconds, default 600) and `COURTLISTENER_OAUTH_USERINFO_URL` for overriding the userinfo endpoint.
+- Point index html to the Free Law wiki for MCP setup instructions.
+- Add MCP server instructions to the global prompt.
+- Add `retry_on_rate_limit` parameter to `citation_lookup` helper for retrying on 429s.
+
+Fixes:
+- Fix JSON serialization of dates and datetimes in MCP tools.
+- Add valid search types to create search alert tool and client helper.
+- Warn in `analyze_citations` output when a verified cluster's case name diverges from the input name, clarify the "occurrences vs unique strings vs unique case clusters" counts in the header, and auto-resolve ambiguous results whose candidate clusters share the same name (surfacing the other cluster IDs).
+- Fix `analyze_citations` tool to use the `html_with_citations` field for the opinion text.
+- Gracefully error handling for alerts tools.
+
+### 0.0.6 - 2026-03-19
+
+- A `fields` parameter for `get` methods on resources and for `get_endpoint_item` tool.
+- Allow `analyze_citations` tool to pull text from an opinion ID instead of a text string.
+
+### 0.0.5 - 2026-03-18
+
+- Add MCP citation tools: `extract_citations` (local eyecite extraction), `analyze_citations` (extraction + API verification), and `resume_citation_analysis` (session-based resumption for rate-limited verification).
+- Add MCP tools for managing alerts: `create_search_alert`, `delete_search_alert`, `subscribe_to_docket_alert`, and `unsubscribe_from_docket_alert`.
+- Allow search alerts to accept structured dict queries in addition to raw query strings, with validation via the `SearchEndpoint` model.
+- Add `CourtListenerAPIError` with parsed response details for more informative error messages.
+- Move MCP server and tools into dedicated `courtlistener.mcp` submodule.
+- Add `mcp` optional dependency extra with `eyecite`, `mcp`, and `tiktoken`.
+- Add `SearchAlerts` and `DocketAlerts` helper classes for managing alerts via the API.
+- Add `CitationLookup` helper for the citation lookup and verification API.
+- Add `num_results` parameter to `search` and `call_endpoint` tools for controlling result count.
+- Add `get_more_results` tool for paginating through previous query results.
+- Add `dump` and `load` helpers to `ResourceIterator` with iteration index tracking.
+- Fix generate endpoints script to handle choice groups.
+- Add `get_endpoint_item` tool to MCP server.
+
+### 0.0.4 - 2026-03-03
+
+- Add `get_endpoint_schema` and `call_endpoint` tools to MCP server.
+- Add `fields` filters to non-search endpoints and add client-side fields filtering to the `search` tool.
+- Add `get_choices` tool for long choice lists.
+- Add `get_counts` tool for retrieving lazy counts from a previous query.
+- Support Python 3.10+
+- Fix setuptools package discovery.
+
+## Past
+
+### 0.0.3 - 2026-02-24
+
+- Add API client support for `order_by`.
+- Fixes bugs with `search_validator` [#26](https://github.com/freelawproject/courtlistener-api-client/issues/26)
+- Adds initial MCP server with `search` tool.
+
+### 0.0.2 - 2026-02-23
+
+- Regenerate endpoints after changes to the API [#6961](https://github.com/freelawproject/courtlistener/issues/6961).
+
+### 0.0.1 - 2026-02-20
+
+- Initial release.
+

@@ -1,0 +1,143 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  changelog:
+    name: Check Changelog
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: tarides/changelog-check-action@v3
+        with:
+          changelog: CHANGES.md
+
+  pre-commit:
+    name: Pre-commit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: pre-commit/action@v3.0.1
+
+  mypy:
+    name: Mypy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --extra dev --extra mcp
+
+      - name: Run mypy
+        run: uv run mypy
+
+  docs:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --extra dev --extra mcp
+
+      - name: Regenerate docs
+        run: |
+          uv run python scripts/generate_mcp_tool_docs.py
+          uv run python scripts/generate_endpoint_docs.py
+
+      - name: Check docs are up to date
+        run: |
+          git add -A docs
+          if ! git diff --cached --quiet -- docs; then
+            git --no-pager diff --cached --stat -- docs
+            echo "::error::Generated docs are stale. Run 'uv run python scripts/generate_mcp_tool_docs.py' and 'uv run python scripts/generate_endpoint_docs.py', then commit the changes."
+            exit 1
+          fi
+
+  sync-client:
+    name: Sync Client Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --extra dev --extra mcp
+
+      - name: Regenerate sync client
+        run: uv run python scripts/generate_sync_client.py
+
+      - name: Check sync client is up to date
+        run: |
+          git add -A courtlistener/sync_client
+          if ! git diff --cached --quiet -- courtlistener/sync_client; then
+            git --no-pager diff --cached -- courtlistener/sync_client
+            echo "::error::Generated sync client is stale. Run 'uv run python scripts/generate_sync_client.py' and commit the changes."
+            exit 1
+          fi
+
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+        - "3.10"
+        - "3.11"
+        - "3.12"
+        - "3.13"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv pip install --system tox tox-uv
+
+      - name: Run tox targets for ${{ matrix.python-version }}
+        run: tox run -f py$(echo ${{ matrix.python-version }} | tr -d .)
