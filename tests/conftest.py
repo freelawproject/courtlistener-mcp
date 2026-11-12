@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 from dotenv import load_dotenv
 
-from courtlistener import CourtListener
+from courtlistener_mcp import CourtListener
 
 # Stub native-build MCP deps only when they are not installed, so
 # tests that don't need them (e.g. test_auth) can still be collected.

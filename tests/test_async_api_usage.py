@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from courtlistener.async_client.api_usage import AsyncApiUsage
+from courtlistener_mcp.async_client.api_usage import AsyncApiUsage
 
 pytestmark = pytest.mark.asyncio
 

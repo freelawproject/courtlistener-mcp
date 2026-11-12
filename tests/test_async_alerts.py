@@ -7,11 +7,11 @@ import httpx
 import pytest
 from pydantic import ValidationError
 
-from courtlistener.async_client.alerts import (
+from courtlistener_mcp.async_client.alerts import (
     AsyncDocketAlerts,
     AsyncSearchAlerts,
 )
-from courtlistener.exceptions import CourtListenerAPIError
+from courtlistener_mcp.exceptions import CourtListenerAPIError
 
 pytestmark = pytest.mark.asyncio
 

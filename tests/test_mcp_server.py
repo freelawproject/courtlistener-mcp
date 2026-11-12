@@ -15,17 +15,17 @@ from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
 from key_value.aio.stores.memory import MemoryStore
 
-import courtlistener.mcp.server as server_mod
-import courtlistener.mcp.storage as storage_mod
-from courtlistener.exceptions import CourtListenerAPIError
-from courtlistener.mcp.server import create_mcp_server
-from courtlistener.mcp.session import (
+import courtlistener_mcp.mcp.server as server_mod
+import courtlistener_mcp.mcp.storage as storage_mod
+from courtlistener_mcp.exceptions import CourtListenerAPIError
+from courtlistener_mcp.mcp.server import create_mcp_server
+from courtlistener_mcp.mcp.session import (
     InMemorySession,
     RedisSession,
     set_session,
 )
-from courtlistener.mcp.tools import MCP_TOOLS
-from courtlistener.mcp.tools.get_counts_tool import GetCountsTool
+from courtlistener_mcp.mcp.tools import MCP_TOOLS
+from courtlistener_mcp.mcp.tools.get_counts_tool import GetCountsTool
 
 pytestmark = pytest.mark.asyncio
 
@@ -120,7 +120,7 @@ class TestHttpApp:
             patch.object(server_mod, "OAUTH_CLIENT_SECRET", "mcp-secret"),
             patch.object(server_mod, "get_oauth_store", MemoryStore),
             patch(
-                "courtlistener.mcp.auth.ApiTokenVerifier.check",
+                "courtlistener_mcp.mcp.auth.ApiTokenVerifier.check",
                 new=AsyncMock(return_value={"user_hash": "h"}),
             ),
         ):

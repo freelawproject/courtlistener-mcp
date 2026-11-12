@@ -103,9 +103,9 @@ jobs:
 
       - name: Check sync client is up to date
         run: |
-          git add -A courtlistener/sync_client
-          if ! git diff --cached --quiet -- courtlistener/sync_client; then
-            git --no-pager diff --cached -- courtlistener/sync_client
+          git add -A courtlistener_mcp/sync_client
+          if ! git diff --cached --quiet -- courtlistener_mcp/sync_client; then
+            git --no-pager diff --cached -- courtlistener_mcp/sync_client
             echo "::error::Generated sync client is stale. Run 'uv run python scripts/generate_sync_client.py' and commit the changes."
             exit 1
           fi

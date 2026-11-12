@@ -6,11 +6,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from courtlistener.async_client.citation_lookup import (
+from courtlistener_mcp.async_client.citation_lookup import (
     MAX_TEXT_LENGTH,
     AsyncCitationLookup,
 )
-from courtlistener.exceptions import CourtListenerAPIError
+from courtlistener_mcp.exceptions import CourtListenerAPIError
 
 pytestmark = pytest.mark.asyncio
 
@@ -49,7 +49,7 @@ class TestLookupText:
         lookup = AsyncCitationLookup(client)
 
         with patch(
-            "courtlistener.async_client.citation_lookup.asyncio.sleep",
+            "courtlistener_mcp.async_client.citation_lookup.asyncio.sleep",
             new_callable=AsyncMock,
         ) as mock_sleep:
             output = await lookup.lookup_text(
@@ -65,7 +65,7 @@ class TestLookupText:
         lookup = AsyncCitationLookup(client)
         with (
             patch(
-                "courtlistener.async_client.citation_lookup.asyncio.sleep",
+                "courtlistener_mcp.async_client.citation_lookup.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
             pytest.raises(CourtListenerAPIError),

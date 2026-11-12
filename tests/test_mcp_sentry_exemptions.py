@@ -16,8 +16,8 @@ import pytest
 from fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
 
-from courtlistener.exceptions import CourtListenerAPIError
-from courtlistener.mcp.exceptions import (
+from courtlistener_mcp.exceptions import CourtListenerAPIError
+from courtlistener_mcp.mcp.exceptions import (
     SentryExemptToolError,
     UnauthorizedToolError,
     UpstreamCourtListenerError,
@@ -25,7 +25,7 @@ from courtlistener.mcp.exceptions import (
     WikiToolError,
     before_send,
 )
-from courtlistener.mcp.tools.mcp_tool import MCPTool
+from courtlistener_mcp.mcp.tools.mcp_tool import MCPTool
 
 
 def _api_error(status_code: int, detail) -> CourtListenerAPIError:
@@ -79,13 +79,14 @@ class TestRunErrorClassification:
             "cached": cached,
         }
         monkeypatch.setattr(
-            "courtlistener.mcp.tools.mcp_tool.get_access_token", lambda: token
+            "courtlistener_mcp.mcp.tools.mcp_tool.get_access_token",
+            lambda: token,
         )
         session = MagicMock()
         session.invalidate_token = AsyncMock()
         session.mark_active = AsyncMock()
         monkeypatch.setattr(
-            "courtlistener.mcp.tools.mcp_tool.get_session", lambda: session
+            "courtlistener_mcp.mcp.tools.mcp_tool.get_session", lambda: session
         )
         return session
 
@@ -166,8 +167,10 @@ class TestRunErrorClassification:
         """The library's fields check is argument validation the input
         schema can't express; ``MCPTool.run`` reclassifies it so it
         lands in the tool-argument Sentry issue."""
-        from courtlistener.exceptions import InvalidFieldsError
-        from courtlistener.mcp.exceptions import ToolArgumentValidationError
+        from courtlistener_mcp.exceptions import InvalidFieldsError
+        from courtlistener_mcp.mcp.exceptions import (
+            ToolArgumentValidationError,
+        )
 
         error = InvalidFieldsError("Invalid fields: ['case_nam'].")
         with pytest.raises(ToolArgumentValidationError) as excinfo:
@@ -236,7 +239,7 @@ class TestBeforeSend:
     def test_keeps_message_only_events_from_other_loggers(self):
         event = {
             "event_id": "abc",
-            "logger": "courtlistener.mcp.session",
+            "logger": "courtlistener_mcp.mcp.session",
             "logentry": {"message": "Error calling tool 'search': boom"},
         }
         assert before_send(event, {}) is event
@@ -258,7 +261,7 @@ class TestValidationErrorFingerprint:
     def _validation_error(self, **kwargs):
         from pydantic import ValidationError
 
-        from courtlistener.models.endpoints.opinion_search import (
+        from courtlistener_mcp.models.endpoints.opinion_search import (
             OpinionSearchEndpoint,
         )
 
@@ -269,7 +272,7 @@ class TestValidationErrorFingerprint:
         raise AssertionError("expected ValidationError")
 
     def test_before_send_sets_fingerprint_and_tags(self):
-        from courtlistener.mcp.exceptions import before_send
+        from courtlistener_mcp.mcp.exceptions import before_send
 
         exc = self._validation_error(court="njsupct")
         event = {}
@@ -282,7 +285,7 @@ class TestValidationErrorFingerprint:
         }
 
     def test_multiple_fields_join_in_field_tag(self):
-        from courtlistener.mcp.exceptions import before_send
+        from courtlistener_mcp.mcp.exceptions import before_send
 
         exc = self._validation_error(
             court="njsupct", order_by="relevance desc"
@@ -292,7 +295,7 @@ class TestValidationErrorFingerprint:
         assert event["tags"]["field"] == "court,order_by"
 
     def test_existing_tags_are_preserved(self):
-        from courtlistener.mcp.exceptions import before_send
+        from courtlistener_mcp.mcp.exceptions import before_send
 
         exc = self._validation_error(court="njsupct")
         event = {"tags": {"release": "1.0"}}
@@ -301,7 +304,7 @@ class TestValidationErrorFingerprint:
         assert event["tags"]["model"] == "OpinionSearchEndpoint"
 
     def test_before_send_leaves_other_errors_alone(self):
-        from courtlistener.mcp.exceptions import before_send
+        from courtlistener_mcp.mcp.exceptions import before_send
 
         event = {}
         err = RuntimeError("boom")
@@ -317,8 +320,10 @@ class TestToolArgumentFingerprint:
     """
 
     def _error_for(self, tool, arguments):
-        from courtlistener.mcp.exceptions import ToolArgumentValidationError
-        from courtlistener.mcp.tools import MCP_TOOLS
+        from courtlistener_mcp.mcp.exceptions import (
+            ToolArgumentValidationError,
+        )
+        from courtlistener_mcp.mcp.tools import MCP_TOOLS
 
         with pytest.raises(ToolArgumentValidationError) as exc_info:
             MCP_TOOLS[tool].validate_arguments(arguments)
@@ -344,7 +349,7 @@ class TestToolArgumentFingerprint:
         assert exc.argument_names == ["fields"]
 
     def test_before_send_sets_fingerprint_and_tags(self):
-        from courtlistener.mcp.exceptions import before_send
+        from courtlistener_mcp.mcp.exceptions import before_send
 
         exc = self._error_for("search", {"type": "o", "query": {}})
         event = {}
@@ -354,7 +359,7 @@ class TestToolArgumentFingerprint:
         assert result["tags"] == {"tool": "search", "field": "query"}
 
     def test_multiple_arguments_join_in_field_tag(self):
-        from courtlistener.mcp.exceptions import before_send
+        from courtlistener_mcp.mcp.exceptions import before_send
 
         exc = self._error_for("get_more_results", {"query": {}})
         event = {}
@@ -395,7 +400,7 @@ class TestSessionDataFingerprint:
     """
 
     def test_before_send_sets_fingerprint_and_tags(self):
-        from courtlistener.mcp.exceptions import SessionDataNotFoundError
+        from courtlistener_mcp.mcp.exceptions import SessionDataNotFoundError
 
         exc = SessionDataNotFoundError(
             "Query ID 'abc123' not found.",
@@ -412,7 +417,7 @@ class TestSessionDataFingerprint:
         }
 
     def test_query_and_job_ids_share_a_fingerprint(self):
-        from courtlistener.mcp.exceptions import SessionDataNotFoundError
+        from courtlistener_mcp.mcp.exceptions import SessionDataNotFoundError
 
         def fingerprint(tool, argument_name):
             exc = SessionDataNotFoundError(

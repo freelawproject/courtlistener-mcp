@@ -4,10 +4,10 @@ import httpx
 import pytest
 from fastmcp.server.auth.auth import AccessToken
 
-from courtlistener.mcp.auth_types import TokenKind
-from courtlistener.mcp.exceptions import WikiAPIError
-from courtlistener.mcp.tools import utils
-from courtlistener.mcp.tools.utils import wiki_get
+from courtlistener_mcp.mcp.auth_types import TokenKind
+from courtlistener_mcp.mcp.exceptions import WikiAPIError
+from courtlistener_mcp.mcp.tools import utils
+from courtlistener_mcp.mcp.tools.utils import wiki_get
 
 pytestmark = pytest.mark.asyncio
 

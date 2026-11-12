@@ -9,13 +9,13 @@ when the API grows a new long list.
 import pytest
 from fastmcp.exceptions import ToolError
 
-from courtlistener.mcp.tools import MCP_TOOLS
-from courtlistener.mcp.tools.utils import (
+from courtlistener_mcp.mcp.tools import MCP_TOOLS
+from courtlistener_mcp.mcp.tools.utils import (
     LONG_CHOICE_FIELDS,
     is_long_choice_field,
     long_choices,
 )
-from courtlistener.models import ENDPOINTS
+from courtlistener_mcp.models import ENDPOINTS
 
 # Above this many choices a field must be curated (or consciously left
 # inline) rather than silently enumerated into every schema.

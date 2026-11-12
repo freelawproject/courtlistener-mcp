@@ -30,7 +30,7 @@ WORKDIR /app
 # Copy all necessary files
 COPY pyproject.toml uv.lock README.md docker-entrypoint.sh gunicorn.conf.py ./
 # Copy source code
-COPY courtlistener/ courtlistener/
+COPY courtlistener_mcp/ courtlistener_mcp/
 
 # UV_PROJECT_ENVIRONMENT is required to specify the path for the venv to use for project operations.
 # Otherwise .venv is created within the project path.

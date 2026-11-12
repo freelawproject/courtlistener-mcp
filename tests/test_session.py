@@ -15,9 +15,9 @@ from redis.exceptions import ConnectionError as RedisConnectionError
 from redis.exceptions import ResponseError
 from redis.exceptions import TimeoutError as RedisTimeoutError
 
-from courtlistener import AsyncCourtListener
-from courtlistener.mcp.auth_types import TokenKind
-from courtlistener.mcp.session import (
+from courtlistener_mcp import AsyncCourtListener
+from courtlistener_mcp.mcp.auth_types import TokenKind
+from courtlistener_mcp.mcp.session import (
     InMemorySession,
     RedisSession,
     Session,
@@ -27,7 +27,7 @@ from courtlistener.mcp.session import (
     set_session,
     token_info_key,
 )
-from courtlistener.mcp.settings import (
+from courtlistener_mcp.mcp.settings import (
     REDIS_CONNECT_TIMEOUT_SECONDS,
     REDIS_SOCKET_TIMEOUT_SECONDS,
 )
@@ -223,18 +223,18 @@ class TestSessionDomainMethods:
 class TestGetSessionFallback:
     def test_redis_url_set_uses_redis(self):
         with patch(
-            "courtlistener.mcp.settings.REDIS_URL", "redis://localhost:1"
+            "courtlistener_mcp.mcp.settings.REDIS_URL", "redis://localhost:1"
         ):
             session = get_session()
         assert isinstance(session, RedisSession)
 
     def test_redis_url_unset_falls_back_to_memory(self):
-        with patch("courtlistener.mcp.settings.REDIS_URL", None):
+        with patch("courtlistener_mcp.mcp.settings.REDIS_URL", None):
             session = get_session()
         assert isinstance(session, InMemorySession)
 
     def test_singleton_is_reused(self):
-        with patch("courtlistener.mcp.settings.REDIS_URL", None):
+        with patch("courtlistener_mcp.mcp.settings.REDIS_URL", None):
             assert get_session() is get_session()
 
     def test_set_session_overrides(self):
@@ -250,7 +250,7 @@ class TestGetSessionFallback:
         session = RedisSession("redis://example.test:6379")
         assert session._client is None
         with patch(
-            "courtlistener.mcp.session.redis.from_url",
+            "courtlistener_mcp.mcp.session.redis.from_url",
             return_value=MagicMock(),
         ) as from_url:
             _ = session.client

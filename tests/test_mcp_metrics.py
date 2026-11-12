@@ -12,16 +12,16 @@ from mcp.types import ToolAnnotations
 from prometheus_client import REGISTRY
 from pydantic import BaseModel, ValidationError
 
-import courtlistener.mcp.metrics as metrics_mod
-from courtlistener.exceptions import CourtListenerAPIError
-from courtlistener.mcp.exceptions import (
+import courtlistener_mcp.mcp.metrics as metrics_mod
+from courtlistener_mcp.exceptions import CourtListenerAPIError
+from courtlistener_mcp.mcp.exceptions import (
     SessionDataNotFoundError,
     ToolArgumentValidationError,
     UnauthorizedToolError,
     UpstreamCourtListenerError,
     WikiToolError,
 )
-from courtlistener.mcp.metrics import (
+from courtlistener_mcp.mcp.metrics import (
     OUTCOMES,
     ActiveUserMarker,
     active_user_counts,
@@ -29,9 +29,13 @@ from courtlistener.mcp.metrics import (
     render_metrics,
     tool_calls_total,
 )
-from courtlistener.mcp.server import create_mcp_server
-from courtlistener.mcp.session import InMemorySession, set_session, utc_today
-from courtlistener.mcp.tools.mcp_tool import MCPTool
+from courtlistener_mcp.mcp.server import create_mcp_server
+from courtlistener_mcp.mcp.session import (
+    InMemorySession,
+    set_session,
+    utc_today,
+)
+from courtlistener_mcp.mcp.tools.mcp_tool import MCPTool
 
 
 def _api_error(status_code: int) -> CourtListenerAPIError:

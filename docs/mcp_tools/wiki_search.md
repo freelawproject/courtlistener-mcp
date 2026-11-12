@@ -4,7 +4,7 @@
 
 **Search Wiki**
 
-- **Source:** `courtlistener/mcp/tools/wiki_search_tool.py`
+- **Source:** `courtlistener_mcp/mcp/tools/wiki_search_tool.py`
 - **Estimated definition size:** ~285 tokens (description ~136, input schema ~70; cl100k_base)
 - **Parameters:** 2 (1 required)
 - **Raw input schema:** [`wiki_search.inputs.json`](./wiki_search.inputs.json)

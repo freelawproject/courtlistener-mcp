@@ -7,12 +7,12 @@ import pytest
 from fastmcp.exceptions import ToolError
 from fastmcp.server.auth.auth import AccessToken
 
-from courtlistener.mcp.auth_types import (
+from courtlistener_mcp.mcp.auth_types import (
     NO_CLIENT_ID,
     UNKNOWN_CLIENT_ID,
     TokenKind,
 )
-from courtlistener.mcp.middleware import WikiToolAccess
+from courtlistener_mcp.mcp.middleware import WikiToolAccess
 
 
 def access_token(scopes=("api",), kind=TokenKind.OAUTH, client_id="c"):
@@ -28,7 +28,7 @@ class TestWikiToolAccess:
     @staticmethod
     def as_session(monkeypatch, token):
         monkeypatch.setattr(
-            "courtlistener.mcp.middleware.get_access_token", lambda: token
+            "courtlistener_mcp.mcp.middleware.get_access_token", lambda: token
         )
 
     @pytest.mark.parametrize("excluded", [set(), {"chatgpt"}])
@@ -59,7 +59,8 @@ class TestWikiToolAccess:
                 else access_token(client_id=client_id)
             )
             monkeypatch.setattr(
-                "courtlistener.mcp.middleware.get_access_token", lambda: token
+                "courtlistener_mcp.mcp.middleware.get_access_token",
+                lambda: token,
             )
 
         return use

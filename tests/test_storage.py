@@ -11,7 +11,7 @@ from key_value.aio.stores.postgresql import PostgreSQLStore
 from key_value.aio.stores.redis import RedisStore
 from key_value.aio.wrappers.encryption import FernetEncryptionWrapper
 
-import courtlistener.mcp.storage as storage_mod
+import courtlistener_mcp.mcp.storage as storage_mod
 
 pytestmark = pytest.mark.asyncio
 

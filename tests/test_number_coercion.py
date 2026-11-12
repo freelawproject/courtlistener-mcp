@@ -3,8 +3,8 @@
 import pytest
 from pydantic import ValidationError
 
-from courtlistener import CourtListener
-from courtlistener.models import ENDPOINTS
+from courtlistener_mcp import CourtListener
+from courtlistener_mcp.models import ENDPOINTS
 
 
 def _params(resource, **filters):

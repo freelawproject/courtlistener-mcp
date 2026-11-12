@@ -5,8 +5,8 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
-from courtlistener import CourtListener
-from courtlistener.exceptions import CourtListenerAPIError
+from courtlistener_mcp import CourtListener
+from courtlistener_mcp.exceptions import CourtListenerAPIError
 
 
 @pytest.fixture

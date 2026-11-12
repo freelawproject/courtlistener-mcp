@@ -4,7 +4,7 @@
 
 **Pray for Document**
 
-- **Source:** `courtlistener/mcp/tools/pray_for_document_tool.py`
+- **Source:** `courtlistener_mcp/mcp/tools/pray_for_document_tool.py`
 - **Estimated definition size:** ~317 tokens (description ~156, input schema ~75; cl100k_base)
 - **Parameters:** 1 (1 required)
 - **Raw input schema:** [`pray_for_document.inputs.json`](./pray_for_document.inputs.json)

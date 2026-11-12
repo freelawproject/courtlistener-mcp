@@ -15,8 +15,8 @@ Some endpoints are special-cased:
 
 import pytest
 
-from courtlistener.models import ENDPOINTS
-from courtlistener.sync_client.resource import ResourceIterator
+from courtlistener_mcp.models import ENDPOINTS
+from courtlistener_mcp.sync_client.resource import ResourceIterator
 
 # Endpoints that don't support GET list (POST-only, write-only, or
 # require special parameters).

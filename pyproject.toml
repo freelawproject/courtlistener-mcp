@@ -5,7 +5,7 @@ requires = [
 ]
 
 [project]
-name = "courtlistener-api-client"
+name = "courtlistener-mcp"
 version = "1.2.0"
 description = "Official Python SDK for the CourtListener API"
 authors = [{ name = "Free Law Project", email = "info@free.law" }]
@@ -32,7 +32,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 
-urls.Repository = "https://github.com/freelawproject/courtlistener-api-client"
+urls.Repository = "https://github.com/freelawproject/courtlistener-mcp"
 urls."Organisation Homepage" = "https://free.law/"
 
 dependencies = [
@@ -69,20 +69,20 @@ dev = [
 ]
 
 [project.scripts]
-courtlistener-mcp = "courtlistener.mcp.server:main"
+courtlistener-mcp = "courtlistener_mcp.mcp.server:main"
 
 [tool.setuptools.packages.find]
-include = ["courtlistener*"]
+include = ["courtlistener_mcp*"]
 
 [tool.setuptools.package-data]
-"courtlistener.mcp" = ["assets/*"]
+"courtlistener_mcp.mcp" = ["assets/*"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
 
 [tool.mypy]
-files = ["courtlistener"]
+files = ["courtlistener_mcp"]
 python_version = "3.10"
 check_untyped_defs = true
 warn_redundant_casts = true

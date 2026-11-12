@@ -5,8 +5,8 @@ from datetime import date
 import httpx
 import pytest
 
-from courtlistener import CourtListener
-from courtlistener.utils import flatten_filters
+from courtlistener_mcp import CourtListener
+from courtlistener_mcp.utils import flatten_filters
 
 
 def _params(**filters):

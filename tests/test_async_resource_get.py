@@ -9,8 +9,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from courtlistener.async_client.resource import AsyncResource
-from courtlistener.models import ENDPOINTS
+from courtlistener_mcp.async_client.resource import AsyncResource
+from courtlistener_mcp.models import ENDPOINTS
 
 pytestmark = pytest.mark.asyncio
 
