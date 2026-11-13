@@ -9,6 +9,7 @@ Features:
 
 Changes:
 - The MCP server no longer carries its own copy of the CourtListener API client. It depends on `courtlistener-api-client==1.3.0` and imports the client, models, exceptions and helpers from `courtlistener`; the vendored `async_client`, `sync_client`, `models` and SDK modules, the sync-client generator and its CI check, and the SDK's tests are removed. The MCP code moves up from `courtlistener_mcp/mcp/` to `courtlistener_mcp/` (for example `courtlistener_mcp.mcp.server` is now `courtlistener_mcp.server`), and the container entrypoint, console script and generated tool docs follow. The server's dependencies, formerly the `mcp` extra, are now the package's main dependencies, so `pip install courtlistener-mcp` installs a working server; the `mcp` extra is gone, along with the unused `click` and `unasync` dev dependencies.
+- Replace the README, which still described the API client, with a short placeholder until the MCP docs are written.
 
 Fixes:
 -
