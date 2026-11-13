@@ -4,7 +4,7 @@
 
 **Subscribe to Docket Alert**
 
-- **Source:** `courtlistener_mcp/mcp/tools/subscribe_to_docket_alert_tool.py`
+- **Source:** `courtlistener_mcp/tools/subscribe_to_docket_alert_tool.py`
 - **Estimated definition size:** ~162 tokens (description ~31, input schema ~45; cl100k_base)
 - **Parameters:** 1 (1 required)
 - **Raw input schema:** [`subscribe_to_docket_alert.inputs.json`](./subscribe_to_docket_alert.inputs.json)

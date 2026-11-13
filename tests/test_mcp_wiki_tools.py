@@ -6,18 +6,18 @@ from unittest.mock import AsyncMock
 import pytest
 from fastmcp.server.auth.auth import AccessToken
 
-from courtlistener_mcp.mcp.auth_types import TokenKind
-from courtlistener_mcp.mcp.exceptions import (
+from courtlistener_mcp.auth_types import TokenKind
+from courtlistener_mcp.exceptions import (
     ToolArgumentValidationError,
     WikiAPIError,
 )
-from courtlistener_mcp.mcp.middleware import WIKI_TOOL_NAMES
-from courtlistener_mcp.mcp.settings import WIKI_BASE_URL
-from courtlistener_mcp.mcp.tools import MCP_TOOLS, wiki_tool
-from courtlistener_mcp.mcp.tools.wiki_list_pages_tool import WikiListPagesTool
-from courtlistener_mcp.mcp.tools.wiki_read_page_tool import WikiReadPageTool
-from courtlistener_mcp.mcp.tools.wiki_search_tool import WikiSearchTool
-from courtlistener_mcp.mcp.tools.wiki_tool import MISSING_WIKI_SCOPES_MESSAGE
+from courtlistener_mcp.middleware import WIKI_TOOL_NAMES
+from courtlistener_mcp.settings import WIKI_BASE_URL
+from courtlistener_mcp.tools import MCP_TOOLS, wiki_tool
+from courtlistener_mcp.tools.wiki_list_pages_tool import WikiListPagesTool
+from courtlistener_mcp.tools.wiki_read_page_tool import WikiReadPageTool
+from courtlistener_mcp.tools.wiki_search_tool import WikiSearchTool
+from courtlistener_mcp.tools.wiki_tool import MISSING_WIKI_SCOPES_MESSAGE
 
 FULL_SCOPES = ["openid", "api", "wiki", "profile", "email"]
 SUMMARY = {"path": "eng/deploys", "title": "Deploys", "description": "…"}

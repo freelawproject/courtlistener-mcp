@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from courtlistener_mcp.mcp.tools import MCP_TOOLS
+from courtlistener_mcp.tools import MCP_TOOLS
 
 READ_ONLY_TOOLS = {
     "search",

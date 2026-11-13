@@ -10,7 +10,7 @@ from utils import (
     schema_type_str,
 )
 
-from courtlistener_mcp.mcp.tools import MCP_TOOLS
+from courtlistener_mcp.tools import MCP_TOOLS
 
 TOOLS_DOCS_DIR = DOCS_DIR / "mcp_tools"
 

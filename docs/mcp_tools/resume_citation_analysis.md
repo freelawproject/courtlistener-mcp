@@ -4,7 +4,7 @@
 
 **Resume Citation Analysis**
 
-- **Source:** `courtlistener_mcp/mcp/tools/resume_citation_analysis_tool.py`
+- **Source:** `courtlistener_mcp/tools/resume_citation_analysis_tool.py`
 - **Estimated definition size:** ~251 tokens (description ~43, input schema ~125; cl100k_base)
 - **Parameters:** 2 (1 required)
 - **Raw input schema:** [`resume_citation_analysis.inputs.json`](./resume_citation_analysis.inputs.json)
