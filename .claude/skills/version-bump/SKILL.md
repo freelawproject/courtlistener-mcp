@@ -6,7 +6,7 @@ argument-hint: "[X.Y.Z]"
 
 # Version bump
 
-Release a new version of `courtlistener-api-client` to PyPI. `$ARGUMENTS`
+Release a new version of `courtlistener-mcp` to PyPI. `$ARGUMENTS`
 is the version:
 
 - (empty): bump the patch number, e.g. `1.2.0` → `1.2.1`.
@@ -31,7 +31,7 @@ point at the merge commit on `main`, not at a commit on the PR branch.
    since a branch with the same name as the tag makes the ref ambiguous.
 4. Change the version in three places:
    - **`pyproject.toml`:** `version = "$NEW_VERSION"`.
-   - **`uv.lock`:** run `uv lock` so the `courtlistener-api-client`
+   - **`uv.lock`:** run `uv lock` so the `courtlistener-mcp`
      package entry picks up the new version. Check that the diff touches
      only that entry. An old `uv` rewrites the whole lockfile in an older
      format; if that happens, discard the change and use a current `uv`.
@@ -57,7 +57,7 @@ point at the merge commit on `main`, not at a commit on the PR branch.
    (`gh pr view <n> --json mergeCommit`).
 9. Watch the publish run with `gh run list --workflow pypi.yml` and
    `gh run watch`. Report the result, and on success link
-   `https://pypi.org/project/courtlistener-api-client/$NEW_VERSION/`. If
+   `https://pypi.org/project/courtlistener-mcp/$NEW_VERSION/`. If
    it fails, report the failure and stop. Don't delete or move the tag
    without the user's go-ahead, since PyPI never accepts the same version
    twice.
