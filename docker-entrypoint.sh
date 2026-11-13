@@ -7,7 +7,7 @@ mkdir -p "$PROMETHEUS_MULTIPROC_DIR"
 find "$PROMETHEUS_MULTIPROC_DIR" -maxdepth 1 -type f -name '*.db' -delete
 
 if [ -n "${PGHOST:-}" ]; then
-    python -m courtlistener_mcp.mcp.storage init \
+    python -m courtlistener_mcp.storage init \
         || echo "OAuth store init failed" >&2
 fi
 
@@ -21,10 +21,10 @@ if [ "$TARGET_ENV" = "prod" ]; then
         --timeout=300 \
         --access-logfile=- \
         --error-logfile=- \
-        courtlistener_mcp.mcp.app:app
+        courtlistener_mcp.app:app
 else
     # Development command
-    exec uvicorn courtlistener_mcp.mcp.app:app \
+    exec uvicorn courtlistener_mcp.app:app \
         --host 0.0.0.0 \
         --port 8080 \
         --log-level debug \

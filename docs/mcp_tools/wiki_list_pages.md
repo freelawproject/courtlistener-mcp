@@ -4,7 +4,7 @@
 
 **List Wiki Pages**
 
-- **Source:** `courtlistener_mcp/mcp/tools/wiki_list_pages_tool.py`
+- **Source:** `courtlistener_mcp/tools/wiki_list_pages_tool.py`
 - **Estimated definition size:** ~261 tokens (description ~133, input schema ~46; cl100k_base)
 - **Parameters:** 1 (0 required)
 - **Raw input schema:** [`wiki_list_pages.inputs.json`](./wiki_list_pages.inputs.json)

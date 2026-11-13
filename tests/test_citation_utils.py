@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from courtlistener_mcp.mcp.tools.citation_utils import (
+from courtlistener_mcp.tools.citation_utils import (
     CASE_NAME_MATCH_THRESHOLD,
     _auto_resolve_identical_clusters,
     case_name_mismatch,
