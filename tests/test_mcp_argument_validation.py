@@ -22,13 +22,13 @@ import pytest
 from fastmcp.exceptions import ToolError
 from jsonschema import Draft202012Validator
 
-from courtlistener.mcp.exceptions import ToolArgumentValidationError
-from courtlistener.mcp.tools import MCP_TOOLS
-from courtlistener.mcp.tools.mcp_tool import coerce_integral_floats
-from courtlistener.mcp.tools.read_document_tool import ReadDocumentTool
-from courtlistener.mcp.tools.utils import endpoint_ids
-from courtlistener.models import ENDPOINTS
-from courtlistener.utils import did_you_mean, validate_model_fields
+from courtlistener_mcp.mcp.exceptions import ToolArgumentValidationError
+from courtlistener_mcp.mcp.tools import MCP_TOOLS
+from courtlistener_mcp.mcp.tools.mcp_tool import coerce_integral_floats
+from courtlistener_mcp.mcp.tools.read_document_tool import ReadDocumentTool
+from courtlistener_mcp.mcp.tools.utils import endpoint_ids
+from courtlistener_mcp.models import ENDPOINTS
+from courtlistener_mcp.utils import did_you_mean, validate_model_fields
 
 ENDPOINT_ID_TOOLS = [
     "get_endpoint_schema",
@@ -324,18 +324,18 @@ class TestFieldsNormalization:
     """
 
     def test_normalize_comma_separated(self):
-        from courtlistener.mcp.tools.utils import normalize_fields
+        from courtlistener_mcp.mcp.tools.utils import normalize_fields
 
         assert normalize_fields("id,case_name") == ["id", "case_name"]
 
     def test_normalize_space_and_mixed(self):
-        from courtlistener.mcp.tools.utils import normalize_fields
+        from courtlistener_mcp.mcp.tools.utils import normalize_fields
 
         assert normalize_fields("id case_name") == ["id", "case_name"]
         assert normalize_fields("id, case_name,") == ["id", "case_name"]
 
     def test_lists_and_none_pass_through(self):
-        from courtlistener.mcp.tools.utils import normalize_fields
+        from courtlistener_mcp.mcp.tools.utils import normalize_fields
 
         assert normalize_fields(["id"]) == ["id"]
         assert normalize_fields(None) is None
@@ -434,7 +434,7 @@ class TestJsonEncodedArguments:
         ],
     )
     def test_schema_allows_type(self, schema, expected):
-        from courtlistener.mcp.tools.mcp_tool import schema_allows_type
+        from courtlistener_mcp.mcp.tools.mcp_tool import schema_allows_type
 
         assert schema_allows_type(schema, "number") is expected
 
@@ -542,7 +542,7 @@ class TestIntegralFloatArguments:
         with (
             patch.object(ReadDocumentTool, "get_client", return_value=client),
             patch(
-                "courtlistener.mcp.tools.read_document_tool."
+                "courtlistener_mcp.mcp.tools.read_document_tool."
                 "fetch_document_text",
                 fake_fetch,
             ),

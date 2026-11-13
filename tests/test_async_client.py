@@ -4,23 +4,23 @@ import inspect
 
 import pytest
 
-from courtlistener import AsyncCourtListener, CourtListener
-from courtlistener.async_client.alerts import (
+from courtlistener_mcp import AsyncCourtListener, CourtListener
+from courtlistener_mcp.async_client.alerts import (
     AsyncDocketAlerts,
     AsyncSearchAlerts,
 )
-from courtlistener.async_client.api_usage import AsyncApiUsage
-from courtlistener.async_client.citation_lookup import AsyncCitationLookup
-from courtlistener.async_client.prayers import AsyncPrayers
-from courtlistener.async_client.resource import (
+from courtlistener_mcp.async_client.api_usage import AsyncApiUsage
+from courtlistener_mcp.async_client.citation_lookup import AsyncCitationLookup
+from courtlistener_mcp.async_client.prayers import AsyncPrayers
+from courtlistener_mcp.async_client.resource import (
     AsyncResource,
     AsyncResourceIterator,
 )
-from courtlistener.sync_client.alerts import DocketAlerts, SearchAlerts
-from courtlistener.sync_client.api_usage import ApiUsage
-from courtlistener.sync_client.citation_lookup import CitationLookup
-from courtlistener.sync_client.prayers import Prayers
-from courtlistener.sync_client.resource import Resource, ResourceIterator
+from courtlistener_mcp.sync_client.alerts import DocketAlerts, SearchAlerts
+from courtlistener_mcp.sync_client.api_usage import ApiUsage
+from courtlistener_mcp.sync_client.citation_lookup import CitationLookup
+from courtlistener_mcp.sync_client.prayers import Prayers
+from courtlistener_mcp.sync_client.resource import Resource, ResourceIterator
 
 # Sync members that are intentionally renamed in the async API. Both
 # clients expose ``get_*`` methods for the lazy accessors; the sync
@@ -196,8 +196,8 @@ class TestSyncAsyncParity:
         prove the generator's token replacements leave the pure helpers
         untouched.
         """
-        import courtlistener.async_client.citation_lookup as async_mod
-        import courtlistener.sync_client.citation_lookup as sync_mod
+        import courtlistener_mcp.async_client.citation_lookup as async_mod
+        import courtlistener_mcp.sync_client.citation_lookup as sync_mod
 
         for name in ("parse_wait_until", "_wait_until_seconds", "_split_text"):
             assert inspect.getsource(

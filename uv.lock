@@ -476,7 +476,7 @@ wheels = [
 ]
 
 [[package]]
-name = "courtlistener-api-client"
+name = "courtlistener-mcp"
 version = "1.2.0"
 source = { editable = "." }
 dependencies = [

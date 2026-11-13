@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from courtlistener.mcp.tools.get_api_usage_tool import (
+from courtlistener_mcp.mcp.tools.get_api_usage_tool import (
     GetApiUsageTool,
     summarize_main_quota,
 )

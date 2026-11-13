@@ -10,7 +10,7 @@
     "url": "https://free.law"
   },
   "homepage": "https://wiki.free.law/c/courtlistener/help/api/mcp",
-  "repository": "https://github.com/freelawproject/courtlistener-api-client",
+  "repository": "https://github.com/freelawproject/courtlistener-mcp",
   "license": "BSD-2-Clause",
   "keywords": ["legal", "case-law", "courts", "citations", "dockets", "pacer", "recap"],
   "suggestedPrompts": [

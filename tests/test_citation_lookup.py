@@ -6,8 +6,8 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
-from courtlistener.exceptions import CourtListenerAPIError
-from courtlistener.sync_client.citation_lookup import (
+from courtlistener_mcp.exceptions import CourtListenerAPIError
+from courtlistener_mcp.sync_client.citation_lookup import (
     MAX_TEXT_LENGTH,
     CitationLookup,
     _split_text,
@@ -50,7 +50,7 @@ class TestRateLimitRetry:
         lookup = CitationLookup(client)
 
         with patch(
-            "courtlistener.sync_client.citation_lookup.time.sleep"
+            "courtlistener_mcp.sync_client.citation_lookup.time.sleep"
         ) as mock_sleep:
             output = lookup.lookup_text(
                 "576 U.S. 644", retry_on_rate_limit=True
@@ -64,7 +64,7 @@ class TestRateLimitRetry:
         client = _mock_client(_throttle_error(), _throttle_error())
         lookup = CitationLookup(client)
         with (
-            patch("courtlistener.sync_client.citation_lookup.time.sleep"),
+            patch("courtlistener_mcp.sync_client.citation_lookup.time.sleep"),
             pytest.raises(CourtListenerAPIError),
         ):
             lookup.lookup_text("576 U.S. 644", retry_on_rate_limit=True)

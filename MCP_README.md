@@ -280,12 +280,12 @@ Then point your MCP client at the `courtlistener-mcp` command as a stdio server.
 **HTTP mode with OAuth** (matches the hosted deployment):
 
 ```bash
-git clone https://github.com/freelawproject/courtlistener-api-client
-cd courtlistener-api-client
+git clone https://github.com/freelawproject/courtlistener-mcp
+cd courtlistener-mcp
 docker compose up
 ```
 
-This launches the MCP server on `http://localhost:8080` with Redis and Postgres. When `PGHOST` is set, the container entrypoint runs `python -m courtlistener.mcp.storage init` before the server starts, which has the key-value library create the OAuth store's `kv_store` table if it is missing, retrying while Postgres is still coming up and when pods starting at the same time collide. If it still fails, the server starts anyway and `/health` shows it. The web workers never create schema, and `/health` probes the store and reports the result as `config.oauth_store`, without affecting `status`. Environment variables:
+This launches the MCP server on `http://localhost:8080` with Redis and Postgres. When `PGHOST` is set, the container entrypoint runs `python -m courtlistener_mcp.mcp.storage init` before the server starts, which has the key-value library create the OAuth store's `kv_store` table if it is missing, retrying while Postgres is still coming up and when pods starting at the same time collide. If it still fails, the server starts anyway and `/health` shows it. The web workers never create schema, and `/health` probes the store and reports the result as `config.oauth_store`, without affecting `status`. Environment variables:
 
 | Variable | Required? | Description |
 | --- | --- | --- |
@@ -304,13 +304,13 @@ This launches the MCP server on `http://localhost:8080` with Redis and Postgres.
 | `MCP_TOKEN_CACHE_TTL` | no | Token-to-user-hash cache TTL in seconds; defaults to `600`. |
 | `PROMETHEUS_MULTIPROC_DIR` | no | Directory for per-worker Prometheus metric files, merged by `/metrics`. The Docker entrypoint sets it; needed whenever more than one worker process serves the app. |
 
-Source code: [github.com/freelawproject/courtlistener-api-client](https://github.com/freelawproject/courtlistener-api-client)
+Source code: [github.com/freelawproject/courtlistener-mcp](https://github.com/freelawproject/courtlistener-mcp)
 
 ---
 
 ## Support
 
-- **Bug reports and feature requests**: [github.com/freelawproject/courtlistener-api-client/issues](https://github.com/freelawproject/courtlistener-api-client/issues)
+- **Bug reports and feature requests**: [github.com/freelawproject/courtlistener-mcp/issues](https://github.com/freelawproject/courtlistener-mcp/issues)
 - **Security issues**: see [SECURITY.md](SECURITY.md) for responsible disclosure
 - **General CourtListener questions**: [free.law/contact/](https://free.law/contact/)
 - **Twitter/X**: [@freelawproject](https://twitter.com/freelawproject)

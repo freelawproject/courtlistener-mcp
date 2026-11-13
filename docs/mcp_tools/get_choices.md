@@ -4,7 +4,7 @@
 
 **Get Field Choices**
 
-- **Source:** `courtlistener/mcp/tools/get_choices_tool.py`
+- **Source:** `courtlistener_mcp/mcp/tools/get_choices_tool.py`
 - **Estimated definition size:** ~240 tokens (description ~46, input schema ~115; cl100k_base)
 - **Parameters:** 1 (1 required)
 - **Raw input schema:** [`get_choices.inputs.json`](./get_choices.inputs.json)

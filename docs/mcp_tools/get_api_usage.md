@@ -4,7 +4,7 @@
 
 **Get API Usage**
 
-- **Source:** `courtlistener/mcp/tools/get_api_usage_tool.py`
+- **Source:** `courtlistener_mcp/mcp/tools/get_api_usage_tool.py`
 - **Estimated definition size:** ~301 tokens (description ~199, input schema ~16; cl100k_base)
 - **Parameters:** 0 (0 required)
 - **Raw input schema:** [`get_api_usage.inputs.json`](./get_api_usage.inputs.json)

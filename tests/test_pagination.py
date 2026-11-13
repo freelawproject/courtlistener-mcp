@@ -10,8 +10,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from courtlistener import CourtListener
-from courtlistener.sync_client.resource import ResourceIterator
+from courtlistener_mcp import CourtListener
+from courtlistener_mcp.sync_client.resource import ResourceIterator
 
 NEXT_URL = "https://www.courtlistener.com/api/rest/v4/courts/?cursor=abc"
 

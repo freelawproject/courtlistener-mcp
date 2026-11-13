@@ -8,9 +8,9 @@ import httpx
 import pytest
 from pydantic import ValidationError
 
-from courtlistener.exceptions import CourtListenerAPIError
-from courtlistener.models.alerts import normalize_search_query
-from courtlistener.sync_client.alerts import DocketAlerts, SearchAlerts
+from courtlistener_mcp.exceptions import CourtListenerAPIError
+from courtlistener_mcp.models.alerts import normalize_search_query
+from courtlistener_mcp.sync_client.alerts import DocketAlerts, SearchAlerts
 
 # ---------------------------------------------------------------------------
 # Unit tests – normalize_search_query

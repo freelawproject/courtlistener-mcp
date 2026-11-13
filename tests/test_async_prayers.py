@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from pydantic import ValidationError
 
-from courtlistener.async_client.prayers import AsyncPrayers
+from courtlistener_mcp.async_client.prayers import AsyncPrayers
 
 pytestmark = pytest.mark.asyncio
 

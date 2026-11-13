@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from courtlistener import AsyncCourtListener
-from courtlistener.async_client.resource import AsyncResourceIterator
+from courtlistener_mcp import AsyncCourtListener
+from courtlistener_mcp.async_client.resource import AsyncResourceIterator
 
 pytestmark = pytest.mark.asyncio
 

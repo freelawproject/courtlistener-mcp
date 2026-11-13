@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from courtlistener import AsyncCourtListener
-from courtlistener.exceptions import CourtListenerAPIError
+from courtlistener_mcp import AsyncCourtListener
+from courtlistener_mcp.exceptions import CourtListenerAPIError
 
 pytestmark = pytest.mark.asyncio
 
