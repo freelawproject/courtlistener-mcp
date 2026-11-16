@@ -4,7 +4,7 @@
 
 **Withdraw Prayer**
 
-- **Source:** `courtlistener_mcp/mcp/tools/withdraw_prayer_tool.py`
+- **Source:** `courtlistener_mcp/tools/withdraw_prayer_tool.py`
 - **Estimated definition size:** ~222 tokens (description ~89, input schema ~52; cl100k_base)
 - **Parameters:** 1 (1 required)
 - **Raw input schema:** [`withdraw_prayer.inputs.json`](./withdraw_prayer.inputs.json)

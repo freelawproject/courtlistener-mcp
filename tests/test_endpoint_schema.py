@@ -5,9 +5,10 @@ from __future__ import annotations
 import asyncio
 import json
 
-from courtlistener_mcp.mcp.tools import MCP_TOOLS
-from courtlistener_mcp.mcp.tools.utils import inline_refs
-from courtlistener_mcp.models import ENDPOINTS
+from courtlistener.models import ENDPOINTS
+
+from courtlistener_mcp.tools import MCP_TOOLS
+from courtlistener_mcp.tools.utils import inline_refs
 
 
 def _schema(endpoint_id: str) -> dict:

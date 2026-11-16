@@ -15,23 +15,23 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastmcp.exceptions import ToolError
 
-from courtlistener_mcp.mcp.exceptions import ToolArgumentValidationError
-from courtlistener_mcp.mcp.session import (
+from courtlistener_mcp.exceptions import ToolArgumentValidationError
+from courtlistener_mcp.session import (
     InMemorySession,
     get_session,
     set_session,
 )
-from courtlistener_mcp.mcp.tools import MCP_TOOLS
-from courtlistener_mcp.mcp.tools.analyze_citations_tool import (
+from courtlistener_mcp.tools import MCP_TOOLS
+from courtlistener_mcp.tools.analyze_citations_tool import (
     AnalyzeCitationsTool,
 )
-from courtlistener_mcp.mcp.tools.get_more_results_tool import (
+from courtlistener_mcp.tools.get_more_results_tool import (
     GetMoreResultsTool,
 )
-from courtlistener_mcp.mcp.tools.read_document_tool import ReadDocumentTool
-from courtlistener_mcp.mcp.tools.search_document_tool import SearchDocumentTool
-from courtlistener_mcp.mcp.tools.search_tool import SearchTool
-from courtlistener_mcp.mcp.tools.utils import (
+from courtlistener_mcp.tools.read_document_tool import ReadDocumentTool
+from courtlistener_mcp.tools.search_document_tool import SearchDocumentTool
+from courtlistener_mcp.tools.search_tool import SearchTool
+from courtlistener_mcp.tools.utils import (
     CLUSTER_OPINION_FIELDS,
     add_opinion_ids,
     describe_opinion,
@@ -275,7 +275,7 @@ class TestAddOpinionIds:
                 GetMoreResultsTool, "get_client", return_value=client
             ),
             patch(
-                "courtlistener_mcp.mcp.tools.get_more_results_tool."
+                "courtlistener_mcp.tools.get_more_results_tool."
                 "AsyncResourceIterator"
             ) as iterator_cls,
         ):

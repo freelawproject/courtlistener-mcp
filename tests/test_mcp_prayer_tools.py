@@ -4,12 +4,12 @@ from unittest.mock import AsyncMock, MagicMock
 
 import httpx
 import pytest
+from courtlistener.exceptions import CourtListenerAPIError
 
-from courtlistener_mcp.exceptions import CourtListenerAPIError
-from courtlistener_mcp.mcp.tools.pray_for_document_tool import (
+from courtlistener_mcp.tools.pray_for_document_tool import (
     PrayForDocumentTool,
 )
-from courtlistener_mcp.mcp.tools.withdraw_prayer_tool import WithdrawPrayerTool
+from courtlistener_mcp.tools.withdraw_prayer_tool import WithdrawPrayerTool
 
 pytestmark = pytest.mark.asyncio
 

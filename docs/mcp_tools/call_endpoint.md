@@ -4,7 +4,7 @@
 
 **Call API Endpoint**
 
-- **Source:** `courtlistener_mcp/mcp/tools/call_endpoint_tool.py`
+- **Source:** `courtlistener_mcp/tools/call_endpoint_tool.py`
 - **Estimated definition size:** ~510 tokens (description ~39, input schema ~391; cl100k_base)
 - **Parameters:** 3 (1 required)
 - **Raw input schema:** [`call_endpoint.inputs.json`](./call_endpoint.inputs.json)

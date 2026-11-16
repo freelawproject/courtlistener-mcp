@@ -6,22 +6,22 @@ from unittest.mock import AsyncMock, MagicMock, call
 
 import httpx
 import pytest
+from courtlistener.exceptions import CourtListenerAPIError
 from fastmcp import Client
 from fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
 from prometheus_client import REGISTRY
 from pydantic import BaseModel, ValidationError
 
-import courtlistener_mcp.mcp.metrics as metrics_mod
-from courtlistener_mcp.exceptions import CourtListenerAPIError
-from courtlistener_mcp.mcp.exceptions import (
+import courtlistener_mcp.metrics as metrics_mod
+from courtlistener_mcp.exceptions import (
     SessionDataNotFoundError,
     ToolArgumentValidationError,
     UnauthorizedToolError,
     UpstreamCourtListenerError,
     WikiToolError,
 )
-from courtlistener_mcp.mcp.metrics import (
+from courtlistener_mcp.metrics import (
     OUTCOMES,
     ActiveUserMarker,
     active_user_counts,
@@ -29,13 +29,13 @@ from courtlistener_mcp.mcp.metrics import (
     render_metrics,
     tool_calls_total,
 )
-from courtlistener_mcp.mcp.server import create_mcp_server
-from courtlistener_mcp.mcp.session import (
+from courtlistener_mcp.server import create_mcp_server
+from courtlistener_mcp.session import (
     InMemorySession,
     set_session,
     utc_today,
 )
-from courtlistener_mcp.mcp.tools.mcp_tool import MCPTool
+from courtlistener_mcp.tools.mcp_tool import MCPTool
 
 
 def _api_error(status_code: int) -> CourtListenerAPIError:

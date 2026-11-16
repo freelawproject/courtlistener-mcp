@@ -52,7 +52,7 @@ ENV TARGET_ENV=${TARGET_ENV}
 ARG GIT_SHA=unknown
 ENV GIT_SHA=${GIT_SHA}
 
-RUN uv sync --extra mcp --frozen;
+RUN uv sync --frozen;
 
 RUN chmod +x /app/docker-entrypoint.sh
 ENTRYPOINT ["/bin/sh","/app/docker-entrypoint.sh"]

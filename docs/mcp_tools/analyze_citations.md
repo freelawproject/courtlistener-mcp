@@ -4,7 +4,7 @@
 
 **Analyze Citations**
 
-- **Source:** `courtlistener_mcp/mcp/tools/analyze_citations_tool.py`
+- **Source:** `courtlistener_mcp/tools/analyze_citations_tool.py`
 - **Estimated definition size:** ~467 tokens (description ~225, input schema ~142; cl100k_base)
 - **Parameters:** 3 (0 required)
 - **Raw input schema:** [`analyze_citations.inputs.json`](./analyze_citations.inputs.json)

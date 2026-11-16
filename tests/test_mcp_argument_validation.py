@@ -19,16 +19,15 @@ rebuilt on every call (``search``'s schema costs ~17ms to build).
 from unittest.mock import MagicMock, patch
 
 import pytest
+from courtlistener.models import ENDPOINTS
 from fastmcp.exceptions import ToolError
 from jsonschema import Draft202012Validator
 
-from courtlistener_mcp.mcp.exceptions import ToolArgumentValidationError
-from courtlistener_mcp.mcp.tools import MCP_TOOLS
-from courtlistener_mcp.mcp.tools.mcp_tool import coerce_integral_floats
-from courtlistener_mcp.mcp.tools.read_document_tool import ReadDocumentTool
-from courtlistener_mcp.mcp.tools.utils import endpoint_ids
-from courtlistener_mcp.models import ENDPOINTS
-from courtlistener_mcp.utils import did_you_mean, validate_model_fields
+from courtlistener_mcp.exceptions import ToolArgumentValidationError
+from courtlistener_mcp.tools import MCP_TOOLS
+from courtlistener_mcp.tools.mcp_tool import coerce_integral_floats
+from courtlistener_mcp.tools.read_document_tool import ReadDocumentTool
+from courtlistener_mcp.tools.utils import endpoint_ids
 
 ENDPOINT_ID_TOOLS = [
     "get_endpoint_schema",
@@ -269,54 +268,6 @@ class TestValidatorCaching:
         tool.validate_arguments({"query_id": "abc12345"})
 
 
-def _field_choices(endpoint_id: str) -> list[str]:
-    """The returnable field names, as ``validate_model_fields`` sees them.
-
-    Distinct from ``model_fields``, which holds the filter parameters.
-    """
-    extra = ENDPOINTS[endpoint_id].model_fields["fields"].json_schema_extra
-    return [choice["value"] for choice in extra["choices"]]
-
-
-class TestDidYouMean:
-    @pytest.mark.parametrize(
-        "value,expected",
-        [
-            ("citation", "citations"),
-            ("nonparticipating_judges", "non_participating_judges"),
-            ("case_nam", "case_name"),
-        ],
-    )
-    def test_suggests_near_misses(self, value, expected):
-        assert expected in did_you_mean(value, _field_choices("clusters"))
-
-    def test_silent_when_nothing_is_close(self):
-        assert did_you_mean("zzzzzz", ["citations", "case_name"]) == ""
-
-
-class TestFieldErrors:
-    def test_invalid_field_suggests_the_plural(self):
-        """The `citation` -> `citations` mistake, from search output."""
-        with pytest.raises(ValueError) as excinfo:
-            validate_model_fields(ENDPOINTS["clusters"], ["citation"])
-        message = str(excinfo.value)
-        assert "Did you mean: citations" in message
-        assert "Fields must be one of:" in message
-
-    def test_deprecated_field_still_lists_valid_fields(self):
-        """No close match; the message must stay useful anyway."""
-        with pytest.raises(ValueError) as excinfo:
-            validate_model_fields(ENDPOINTS["clusters"], ["federal_cite_one"])
-        message = str(excinfo.value)
-        assert "Did you mean" not in message
-        assert "Fields must be one of:" in message
-
-    def test_filter_name_requested_as_field_gets_hint(self):
-        with pytest.raises(ValueError) as excinfo:
-            validate_model_fields(ENDPOINTS["parties"], ["id", "docket"])
-        assert "`docket` is a filter on this endpoint" in str(excinfo.value)
-
-
 class TestFieldsNormalization:
     """Models pass `fields` as comma/space-separated strings (the
     CourtListener API's own syntax); tool schemas accept the string
@@ -324,18 +275,18 @@ class TestFieldsNormalization:
     """
 
     def test_normalize_comma_separated(self):
-        from courtlistener_mcp.mcp.tools.utils import normalize_fields
+        from courtlistener_mcp.tools.utils import normalize_fields
 
         assert normalize_fields("id,case_name") == ["id", "case_name"]
 
     def test_normalize_space_and_mixed(self):
-        from courtlistener_mcp.mcp.tools.utils import normalize_fields
+        from courtlistener_mcp.tools.utils import normalize_fields
 
         assert normalize_fields("id case_name") == ["id", "case_name"]
         assert normalize_fields("id, case_name,") == ["id", "case_name"]
 
     def test_lists_and_none_pass_through(self):
-        from courtlistener_mcp.mcp.tools.utils import normalize_fields
+        from courtlistener_mcp.tools.utils import normalize_fields
 
         assert normalize_fields(["id"]) == ["id"]
         assert normalize_fields(None) is None
@@ -434,7 +385,7 @@ class TestJsonEncodedArguments:
         ],
     )
     def test_schema_allows_type(self, schema, expected):
-        from courtlistener_mcp.mcp.tools.mcp_tool import schema_allows_type
+        from courtlistener_mcp.tools.mcp_tool import schema_allows_type
 
         assert schema_allows_type(schema, "number") is expected
 
@@ -542,7 +493,7 @@ class TestIntegralFloatArguments:
         with (
             patch.object(ReadDocumentTool, "get_client", return_value=client),
             patch(
-                "courtlistener_mcp.mcp.tools.read_document_tool."
+                "courtlistener_mcp.tools.read_document_tool."
                 "fetch_document_text",
                 fake_fetch,
             ),
