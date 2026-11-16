@@ -260,7 +260,7 @@ class TestValidationErrorFingerprint:
     """
 
     def _validation_error(self, **kwargs):
-        from courtlistener.models.endpoints.opinion_search import (
+        from courtlistener.models.generated.endpoints.opinion_search import (
             OpinionSearchEndpoint,
         )
         from pydantic import ValidationError
