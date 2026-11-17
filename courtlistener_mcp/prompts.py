@@ -86,6 +86,15 @@ enormous and are better accessed through `read_document`.
 Avoid trying to fetch PDFs directly, as the courtlistener storages urls are not
 fetchable for AI agents.
 
+# Tags
+
+Tags are CourtListener users' own labels for dockets: a user makes a tag and
+adds dockets to it, building a custom collection such as the cases they're
+following on a topic. They are not court or PACER data and say nothing official
+about a case. Tags are private unless their owner publishes them, so the `tags`
+and `docket-tags` endpoints also show other users' published tags. Use the tag
+tools when the user wants to keep or organize their own collection of dockets.
+
 # Linking to dockets and opinions
 
 Docket and opinion URLs on courtlistener.com require *something* after the

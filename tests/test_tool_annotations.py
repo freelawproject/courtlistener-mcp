@@ -30,12 +30,20 @@ WRITE_TOOLS = {
     "unsubscribe_from_docket_alert",
     "pray_for_document",
     "withdraw_prayer",
+    "create_tag",
+    "update_tag",
+    "delete_tag",
+    "add_docket_to_tag",
+    "remove_docket_from_tag",
 }
 
 DESTRUCTIVE_TOOLS = {
     "delete_search_alert",
     "unsubscribe_from_docket_alert",
     "withdraw_prayer",
+    "update_tag",
+    "delete_tag",
+    "remove_docket_from_tag",
 }
 
 OPEN_WORLD_TOOLS = {
@@ -45,6 +53,11 @@ OPEN_WORLD_TOOLS = {
     "unsubscribe_from_docket_alert",
     "pray_for_document",
     "withdraw_prayer",
+    "create_tag",
+    "update_tag",
+    "delete_tag",
+    "add_docket_to_tag",
+    "remove_docket_from_tag",
 }
 
 # Tools where repeating a call with the same arguments has an
@@ -56,6 +69,7 @@ NON_IDEMPOTENT_TOOLS = {
     "subscribe_to_docket_alert",
     "pray_for_document",
     "get_more_results",
+    "create_tag",
     "resume_citation_analysis",
 }
 
@@ -78,6 +92,11 @@ EXPECTED_TITLES = {
     "unsubscribe_from_docket_alert": "Unsubscribe from Docket Alert",
     "pray_for_document": "Pray for Document",
     "withdraw_prayer": "Withdraw Prayer",
+    "create_tag": "Create Tag",
+    "update_tag": "Update Tag",
+    "delete_tag": "Delete Tag",
+    "add_docket_to_tag": "Add Docket to Tag",
+    "remove_docket_from_tag": "Remove Docket from Tag",
     "get_api_usage": "Get API Usage",
     "wiki_list_pages": "List Wiki Pages",
     "wiki_search": "Search Wiki",
