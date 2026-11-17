@@ -16,11 +16,12 @@ class WikiReadPageTool(WikiTool):
 
     `path` is the page's `path` from `wiki_list_pages` or `wiki_search`,
     e.g. `engineering/deploys`. The page's `url` works too, as do links
-    found in page content: the wiki's own `#engineering/deploys` links
-    and `/c/engineering/deploys/` ones. An `#anchor` on any of them is
-    ignored. Returns the page's path, title, description, `updated_at`,
-    `url` and its `content` as Markdown. Directories aren't pages: to see
-    a directory's pages, search it with `in:<directory path>`.
+    found in page content, such as `/c/engineering/deploys/`. An
+    `#anchor` on any of them is ignored. Returns the page's path, title,
+    description, `updated_at`, `url` and its `content` as Markdown, with
+    data placeholders filled in and wiki links resolved. Directories
+    aren't pages: to see a directory's pages, search it with
+    `in:<directory path>`.
     """
 
     name: str = "wiki_read_page"
@@ -43,7 +44,17 @@ class WikiReadPageTool(WikiTool):
                         "wiki URL, or a link from page content (`#...` or "
                         "`/c/...`)."
                     ),
-                }
+                },
+                "raw": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": (
+                        "Return the page's source instead, including wiki "
+                        "syntax such as `#path` links and `[[ placeholders "
+                        "]]`. Use it to see exactly how a page is written; "
+                        "leave it off to read the page."
+                    ),
+                },
             },
             "required": ["path"],
             "additionalProperties": False,
@@ -83,8 +94,9 @@ class WikiReadPageTool(WikiTool):
 
     async def call_wiki(self, arguments: dict) -> dict:
         path = self.page_path(arguments["path"])
+        params = {"raw": "true"} if arguments.get("raw") else {}
         try:
-            page = await wiki_get(f"pages/{quote(path, safe='/')}")
+            page = await wiki_get(f"pages/{quote(path, safe='/')}", **params)
         except WikiAPIError as exc:
             if exc.status != "404":
                 raise

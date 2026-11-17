@@ -181,7 +181,7 @@ For endpoints that don't have a dedicated tool — financial disclosures, opinio
 | --- | --- |
 | `wiki_list_pages` | List the pages of the [Free Law Project wiki](https://wiki.free.law) you can read, with their paths, descriptions and links, 50 to a page. |
 | `wiki_search` | Full-text search of those pages, 20 results to a page, each with a snippet and a link. Supports quoted phrases, `-word`, `title:word`, and `in:<directory>`. |
-| `wiki_read_page` | Read one page as Markdown, by its path or its link. |
+| `wiki_read_page` | Read one page as Markdown, by its path or its link, with data placeholders filled in and wiki links resolved. `raw` returns the page's source instead. |
 
 The two listing tools take a `page` argument and report the `total` and the `next_page`.
 

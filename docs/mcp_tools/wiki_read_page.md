@@ -5,8 +5,8 @@
 **Read Wiki Page**
 
 - **Source:** `courtlistener_mcp/tools/wiki_read_page_tool.py`
-- **Estimated definition size:** ~298 tokens (description ~145, input schema ~70; cl100k_base)
-- **Parameters:** 1 (1 required)
+- **Estimated definition size:** ~355 tokens (description ~143, input schema ~130; cl100k_base)
+- **Parameters:** 2 (1 required)
 - **Raw input schema:** [`wiki_read_page.inputs.json`](./wiki_read_page.inputs.json)
 
 ## Description
@@ -15,11 +15,12 @@ Read one Free Law Project wiki page as Markdown.
 
 `path` is the page's `path` from `wiki_list_pages` or `wiki_search`,
 e.g. `engineering/deploys`. The page's `url` works too, as do links
-found in page content: the wiki's own `#engineering/deploys` links
-and `/c/engineering/deploys/` ones. An `#anchor` on any of them is
-ignored. Returns the page's path, title, description, `updated_at`,
-`url` and its `content` as Markdown. Directories aren't pages: to see
-a directory's pages, search it with `in:<directory path>`.
+found in page content, such as `/c/engineering/deploys/`. An
+`#anchor` on any of them is ignored. Returns the page's path, title,
+description, `updated_at`, `url` and its `content` as Markdown, with
+data placeholders filled in and wiki links resolved. Directories
+aren't pages: to see a directory's pages, search it with
+`in:<directory path>`.
 
 ## Annotations
 
@@ -38,3 +39,9 @@ a directory's pages, search it with `in:<directory path>`.
 string · **required**
 
 The page's path, e.g. `engineering/deploys`, its wiki URL, or a link from page content (`#...` or `/c/...`).
+
+### `raw`
+
+boolean · optional · default: `false`
+
+Return the page's source instead, including wiki syntax such as `#path` links and `[[ placeholders ]]`. Use it to see exactly how a page is written; leave it off to read the page.
