@@ -477,15 +477,15 @@ wheels = [
 
 [[package]]
 name = "courtlistener-api-client"
-version = "1.3.0"
+version = "2.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7d/31/8de4b353648a4d0c7af15d9a674b770b75d01c2def63b76533d62af98ab5/courtlistener_api_client-1.3.0.tar.gz", hash = "sha256:c45f3a53615fa41b7a248e5f17e0ace18daef4f23fbbe8dff10fe08e6958a355", size = 240223, upload-time = "2026-11-10T20:29:32.157Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1b/94/3adae96224467bd1eb5210cc1cd5e66e44e38460ec24d0b87570847389c8/courtlistener_api_client-2.0.0.tar.gz", hash = "sha256:4df41b67b8ef41a6ee67286bc00ec7fa0c54826e881e8ed23a354af69d94b2a6", size = 128782, upload-time = "2026-11-16T19:21:13.767Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ad/7e/1bfa2c99dff80a1799ae6a02234ea5f52a1d50c90bb7605c0126a3cb7498/courtlistener_api_client-1.3.0-py3-none-any.whl", hash = "sha256:00d53d64c0d8e7e87f42775e184b3684035aa7f469fd21276bf754d7b517dc45", size = 230621, upload-time = "2026-11-10T20:29:30.7Z" },
+    { url = "https://files.pythonhosted.org/packages/d1/ed/4a87e64544689002404c5c8cc2520ca3074bacb8304521b812ea2d392a1f/courtlistener_api_client-2.0.0-py3-none-any.whl", hash = "sha256:ac045e04707a33d67e7dfff7787c4060adfd9925f21cb238b168746a85c1e8b5", size = 150506, upload-time = "2026-11-16T19:21:11.924Z" },
 ]
 
 [[package]]
@@ -524,7 +524,7 @@ dev = [
 requires-dist = [
     { name = "asyncpg", specifier = ">=0.32.0" },
     { name = "asyncpg-stubs", marker = "extra == 'dev'", specifier = ">=0.32.0" },
-    { name = "courtlistener-api-client", specifier = "==1.3.0" },
+    { name = "courtlistener-api-client", specifier = "==2.0.0" },
     { name = "eyecite", specifier = ">=2.6.0" },
     { name = "fastmcp", specifier = "==4.1.3" },
     { name = "gunicorn", specifier = ">=25.3.0" },

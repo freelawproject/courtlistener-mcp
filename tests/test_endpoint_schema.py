@@ -8,7 +8,6 @@ import json
 from courtlistener.models import ENDPOINTS
 
 from courtlistener_mcp.tools import MCP_TOOLS
-from courtlistener_mcp.tools.utils import inline_refs
 
 
 def _schema(endpoint_id: str) -> dict:
@@ -25,43 +24,6 @@ def _non_search_endpoint_ids() -> list[str]:
         if eid not in ids:
             ids.append(eid)
     return ids
-
-
-class TestInlineRefs:
-    def test_inlines_a_simple_ref(self):
-        defs = {
-            "Filter6": {
-                "type": "object",
-                "properties": {"contains": {"type": "string"}},
-            }
-        }
-        node = {"anyOf": [{"type": "string"}, {"$ref": "#/$defs/Filter6"}]}
-        out = inline_refs(node, defs)
-        assert out == {
-            "anyOf": [
-                {"type": "string"},
-                {
-                    "type": "object",
-                    "properties": {"contains": {"type": "string"}},
-                },
-            ]
-        }
-        assert "$ref" not in json.dumps(out)
-
-    def test_preserves_sibling_keys(self):
-        defs = {"F": {"type": "object"}}
-        node = {"$ref": "#/$defs/F", "description": "hi"}
-        out = inline_refs(node, defs)
-        assert out == {"type": "object", "description": "hi"}
-
-    def test_breaks_reference_cycles(self):
-        # F references itself; inlining must terminate.
-        defs = {"F": {"properties": {"self": {"$ref": "#/$defs/F"}}}}
-        out = inline_refs({"$ref": "#/$defs/F"}, defs)
-        assert "$ref" not in json.dumps(out)
-
-    def test_unknown_ref_becomes_empty(self):
-        assert inline_refs({"$ref": "#/$defs/Missing"}, {}) == {}
 
 
 class TestEndpointSchemaOutput:

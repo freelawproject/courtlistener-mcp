@@ -148,31 +148,6 @@ def prepare_choices_str(
     return "Valid choices:\n\n" + json.dumps(choices, indent=2)
 
 
-def inline_refs(node, defs, seen=None):
-    """Recursively replace JSON-Schema ``$ref`` pointers with their definitions."""
-    if isinstance(node, list):
-        return [inline_refs(item, defs, seen) for item in node]
-    if not isinstance(node, dict):
-        return node
-
-    ref = node.get("$ref")
-    if ref is not None:
-        name = ref.rsplit("/", 1)[-1]
-        nodes_seen = seen or frozenset()
-        if name in nodes_seen:
-            return {"type": "object"}
-        target = defs.get(name, {})
-        resolved = inline_refs(target, defs, nodes_seen | {name})
-        siblings = {
-            key: inline_refs(value, defs, seen)
-            for key, value in node.items()
-            if key != "$ref"
-        }
-        return {**resolved, **siblings}
-
-    return {key: inline_refs(value, defs, seen) for key, value in node.items()}
-
-
 def strip_schema_keys(node, keys):
     """Recursively drop ``keys`` from every dict in a schema tree."""
     if isinstance(node, list):

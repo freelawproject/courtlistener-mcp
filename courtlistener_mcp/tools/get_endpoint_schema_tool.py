@@ -1,10 +1,10 @@
 from courtlistener.models import ENDPOINTS
+from courtlistener.utils import inline_refs
 from mcp.types import ToolAnnotations
 
 from courtlistener_mcp.tools.mcp_tool import MCPTool
 from courtlistener_mcp.tools.utils import (
     endpoint_id_property,
-    inline_refs,
     prepare_filter,
 )
 
