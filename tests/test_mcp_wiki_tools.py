@@ -162,6 +162,24 @@ async def test_read_page_accepts_a_path_or_a_page_url(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
+    "arguments, params",
+    [
+        ({"raw": True}, {"raw": "true"}),
+        ({"raw": False}, {}),
+        ({}, {}),
+    ],
+)
+async def test_read_page_asks_for_the_source_only_when_raw(
+    monkeypatch, sign_in, arguments, params
+):
+    tool = WikiReadPageTool()
+    wiki_get = patch_wiki_get(monkeypatch, tool, dict(SUMMARY))
+    await tool.call({"path": "eng/deploys", **arguments})
+    wiki_get.assert_awaited_once_with("pages/eng/deploys", **params)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
     "value",
     [
         "",

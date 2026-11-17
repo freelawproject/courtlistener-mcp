@@ -4,6 +4,11 @@
     "path": {
       "type": "string",
       "description": "The page's path, e.g. `engineering/deploys`, its wiki URL, or a link from page content (`#...` or `/c/...`)."
+    },
+    "raw": {
+      "type": "boolean",
+      "default": false,
+      "description": "Return the page's source instead, including wiki syntax such as `#path` links and `[[ placeholders ]]`. Use it to see exactly how a page is written; leave it off to read the page."
     }
   },
   "required": [
