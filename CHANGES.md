@@ -13,6 +13,7 @@ Changes:
 - Shorten the package description to "Official MCP server for CourtListener".
 - Pin `courtlistener-api-client==2.0.0`. 1.3.0 still shipped its own `courtlistener-mcp` command, which in a clean install ran the old bundled server instead of this package's; 2.0.0 drops it. Import `inline_refs` from `courtlistener.utils` instead of keeping a copy, and drop its tests, which the API client owns.
 - Build and publish to PyPI in separate jobs, so only the publish job holds the OIDC token. Pin the publish and artifact actions to commit SHAs, disable the uv cache and don't persist checkout credentials.
+- Pin `courtlistener-api-client==2.0.1`, which adds the tag and docket-tag writes the tag tools use.
 
 Fixes:
 -
