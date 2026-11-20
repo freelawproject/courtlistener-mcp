@@ -70,7 +70,7 @@ courtlistener-mcp = "courtlistener_mcp.server:main"
 include = ["courtlistener_mcp*"]
 
 [tool.setuptools.package-data]
-"courtlistener_mcp" = ["assets/*"]
+"courtlistener_mcp" = ["assets/**"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "strict"

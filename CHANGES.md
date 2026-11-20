@@ -16,6 +16,7 @@ Changes:
 - Build and publish to PyPI in separate jobs, so only the publish job holds the OIDC token. Pin the publish and artifact actions to commit SHAs, disable the uv cache and don't persist checkout credentials.
 - Pin `courtlistener-api-client==2.0.1`, which adds the tag and docket-tag writes the tag tools use.
 - Automate releases. A weekly Release PR workflow (also runnable by hand with a `patch`, `minor` or `major` bump or an exact version) opens a `release/next` PR whenever `main` has commits since the last release. Scheduled runs leave an open release PR alone, so a version chosen by hand isn't replaced; manual runs rebuild it. The PR bumps the version and moves the Upcoming notes in `CHANGES.md` under it. Merging it runs the Release workflow, which tags the merge commit, creates the GitHub release and starts the PyPI workflow on the tag. The `version-bump` skill is replaced by a `release` skill that runs the Release PR workflow and follows the release through.
+- Sort the server's web files by kind under `assets/`: pages in `html/`, styles in `css/`, icons in `icons/`, with scripts to come in `js/`. Every page shares one stylesheet, `css/base.css` (system font, CourtListener red, light and dark themes), and pages are rendered by the new `courtlistener_mcp/web.py`, where a `{{ path }}` placeholder inlines the asset it names, so each page is self-contained, as sandboxed MCP App views need. The homepage now follows the system's dark theme, and the package data takes everything under `assets/`.
 
 Fixes:
 -

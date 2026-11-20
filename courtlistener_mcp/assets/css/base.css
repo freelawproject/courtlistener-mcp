@@ -1,0 +1,50 @@
+/* The look every page shares: system font, dark text, CourtListener red
+   for links and main actions, light gray panels and borders, and a dark
+   theme. Pages use the variables for anything of their own. */
+:root {
+  --bg: #ffffff;
+  --fg: #222222;
+  --muted: #666666;
+  --border: #dddddd;
+  --panel: #f4f4f4;
+  --accent: #b53c2c;
+  --accent-fg: #ffffff;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1b1b1b;
+    --fg: #e8e8e8;
+    --muted: #a0a0a0;
+    --border: #3a3a3a;
+    --panel: #262626;
+    --accent: #e0705f;
+    --accent-fg: #1b1b1b;
+  }
+}
+/* MCP hosts set data-theme to match their own theme. */
+:root[data-theme="dark"] {
+  --bg: #1b1b1b;
+  --fg: #e8e8e8;
+  --muted: #a0a0a0;
+  --border: #3a3a3a;
+  --panel: #262626;
+  --accent: #e0705f;
+  --accent-fg: #1b1b1b;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+}
+a { color: var(--accent); }
+code {
+  background: var(--panel);
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 0.9em;
+}
+[hidden] { display: none !important; }
