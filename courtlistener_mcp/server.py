@@ -1,5 +1,4 @@
 import asyncio
-import base64
 import contextlib
 
 from fastmcp import FastMCP
@@ -9,6 +8,7 @@ from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import (
     FileResponse,
+    HTMLResponse,
     JSONResponse,
     PlainTextResponse,
     Response,
@@ -24,7 +24,6 @@ from courtlistener_mcp.middleware import WikiToolAccess
 from courtlistener_mcp.prompts import GLOBAL_INSTRUCTIONS
 from courtlistener_mcp.session import RedisSession, get_session
 from courtlistener_mcp.settings import (
-    BASE_DIR,
     GIT_SHA,
     MCP_BASE_URL,
     MCP_JWT_SIGNING_KEY,
@@ -45,35 +44,26 @@ from courtlistener_mcp.storage import (
     postgres_connect,
 )
 from courtlistener_mcp.tools import MCP_TOOLS
+from courtlistener_mcp.web import asset_path, data_uri, render
+
+# The files in assets/icons/ served at the root.
+ICONS = ["favicon.svg", "favicon.ico", "apple-touch-icon.png"]
+ICON_CACHE_HEADERS = {"Cache-Control": "public, max-age=86400"}
 
 
 def create_mcp_server(auth: AuthProvider | None = None) -> FastMCP:
-    assets_dir = BASE_DIR / "assets"
-    favicon_svg_path = assets_dir / "favicon.svg"
-    favicon_ico_path = assets_dir / "favicon.ico"
-    apple_touch_path = assets_dir / "apple-touch-icon.png"
-    index_html_path = assets_dir / "index.html"
-    icon_cache_headers = {"Cache-Control": "public, max-age=86400"}
-
-    favicon_b64 = base64.b64encode(favicon_svg_path.read_bytes()).decode(
-        "utf-8"
-    )
-    apple_touch_b64 = base64.b64encode(apple_touch_path.read_bytes()).decode(
-        "utf-8"
-    )
-
     mcp = FastMCP(
         name="CourtListener",
         instructions=GLOBAL_INSTRUCTIONS,
         website_url="https://courtlistener.com",
         icons=[
             Icon(
-                src=f"data:image/svg+xml;base64,{favicon_b64}",
+                src=data_uri("icons/favicon.svg"),
                 mime_type="image/svg+xml",
                 sizes=["16x16", "32x32"],
             ),
             Icon(
-                src=f"data:image/png;base64,{apple_touch_b64}",
+                src=data_uri("icons/apple-touch-icon.png"),
                 mime_type="image/png",
                 sizes=["180x180"],
             ),
@@ -85,35 +75,17 @@ def create_mcp_server(auth: AuthProvider | None = None) -> FastMCP:
         strict_input_validation=False,
     )
 
-    # Static asset routes
-    @mcp.custom_route("/favicon.svg", methods=["GET"])
-    async def favicon_svg(request):
-        return FileResponse(
-            favicon_svg_path,
-            media_type="image/svg+xml",
-            headers=icon_cache_headers,
-        )
+    # The icons, at the root where browsers look for them.
+    async def icon(request):
+        path = asset_path(f"icons{request.url.path}")
+        return FileResponse(path, headers=ICON_CACHE_HEADERS)
 
-    @mcp.custom_route("/favicon.ico", methods=["GET"])
-    async def favicon_ico(request):
-        return FileResponse(
-            favicon_ico_path,
-            media_type="image/x-icon",
-            headers=icon_cache_headers,
-        )
+    for name in ICONS:
+        mcp.custom_route(f"/{name}", methods=["GET"], name=name)(icon)
 
-    @mcp.custom_route("/apple-touch-icon.png", methods=["GET"])
-    async def apple_touch_icon(request):
-        return FileResponse(
-            apple_touch_path,
-            media_type="image/png",
-            headers=icon_cache_headers,
-        )
-
-    # Home page route
     @mcp.custom_route("/", methods=["GET"])
     async def index(request):
-        return FileResponse(index_html_path, media_type="text/html")
+        return HTMLResponse(render("html/index.html"))
 
     # OpenAI Apps directory domain-verification challenge
     @mcp.custom_route("/.well-known/openai-apps-challenge", methods=["GET"])
