@@ -15,6 +15,7 @@ Changes:
 - Pin `courtlistener-api-client==2.0.0`. 1.3.0 still shipped its own `courtlistener-mcp` command, which in a clean install ran the old bundled server instead of this package's; 2.0.0 drops it. Import `inline_refs` from `courtlistener.utils` instead of keeping a copy, and drop its tests, which the API client owns.
 - Build and publish to PyPI in separate jobs, so only the publish job holds the OIDC token. Pin the publish and artifact actions to commit SHAs, disable the uv cache and don't persist checkout credentials.
 - Pin `courtlistener-api-client==2.0.1`, which adds the tag and docket-tag writes the tag tools use.
+- Automate releases. A weekly Release PR workflow (also runnable by hand with a `patch`, `minor` or `major` bump or an exact version) opens a `release/next` PR whenever `main` has commits since the last release. Scheduled runs leave an open release PR alone, so a version chosen by hand isn't replaced; manual runs rebuild it. The PR bumps the version and moves the Upcoming notes in `CHANGES.md` under it. Merging it runs the Release workflow, which tags the merge commit, creates the GitHub release and starts the PyPI workflow on the tag. The `version-bump` skill is replaced by a `release` skill that runs the Release PR workflow and follows the release through.
 
 Fixes:
 -
