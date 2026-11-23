@@ -5,6 +5,17 @@
 The following changes are not yet released, but are code complete:
 
 Features:
+-
+
+Changes:
+-
+
+Fixes:
+-
+
+### 1.3.1 - 2026-11-23
+
+Features:
 - Add `create_tag`, `update_tag`, `delete_tag`, `add_docket_to_tag` and `remove_docket_from_tag` tools, so a model can manage the user's CourtListener tags instead of telling them it can't. They take tag IDs, since the API hides who owns a tag and listing tags also returns other users' published ones. `add_docket_to_tag` reports a docket that's already in the tag instead of failing, and `remove_docket_from_tag` finds the docket tag by docket ID, like `unsubscribe_from_docket_alert`. Duplicate names, missing tags and dockets, and other users' tags come back as plain messages instead of raw 400s, 403s and 404s; rate limits and server errors still raise. Reading still goes through `call_endpoint` with `tags` and `docket-tags`. The server instructions explain that tags are users' own collections of dockets, not court or PACER data.
 - Add a `raw` argument to `wiki_read_page`. The wiki now returns a page's `content` resolved (data placeholders filled in, wiki links turned into `/c/...` links), and `raw=true` asks it for the stored source instead, wiki syntax and all. `raw` defaults to `false` and is sent to the wiki only when set.
 
