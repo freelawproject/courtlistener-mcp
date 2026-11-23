@@ -3,7 +3,7 @@ from urllib.parse import quote
 
 from mcp.types import ToolAnnotations
 
-from courtlistener_mcp.exceptions import WikiAPIError
+from courtlistener_mcp.exceptions import SessionUnavailableError, WikiAPIError
 from courtlistener_mcp.lib.views import WIKI_EDIT_VIEW
 from courtlistener_mcp.lib.wiki import wiki_page_url, wiki_write
 from courtlistener_mcp.lib.wiki_edits import (
@@ -41,7 +41,16 @@ class WikiConfirmEditTool(WikiTool):
 
     async def call_wiki(self, arguments: dict) -> dict:
         session = get_session()
-        proposal = await session.pop_wiki_edit(arguments["token"])
+        try:
+            proposal = await session.pop_wiki_edit(arguments["token"])
+        except SessionUnavailableError as exc:
+            # The pop may or may not have run, so promise nothing: a
+            # second try either saves or finds the change gone.
+            raise WikiAPIError(
+                "The change couldn't be read just now; you can try saving "
+                "again.",
+                "store",
+            ) from exc
         if proposal is None:
             raise WikiAPIError(
                 "This change has expired or was already saved. Ask for it "
@@ -65,7 +74,17 @@ class WikiConfirmEditTool(WikiTool):
             left = int(expires_at - time.time())
             if not save_may_succeed_later(exc, action) or left < 1:
                 raise
-            await session.store_wiki_edit(arguments["token"], proposal, left)
+            try:
+                await session.store_wiki_edit(
+                    arguments["token"], proposal, left
+                )
+            except SessionUnavailableError:
+                raise WikiAPIError(
+                    f"{exc} The change couldn't be kept, so ask for it to "
+                    "be proposed again.",
+                    exc.status,
+                    code=exc.code,
+                ) from exc
             raise WikiAPIError(
                 f"{exc} {RETRY_HINT}", exc.status, code=exc.code
             ) from exc

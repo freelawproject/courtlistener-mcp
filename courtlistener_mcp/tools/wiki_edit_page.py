@@ -1,7 +1,5 @@
 import asyncio
 import difflib
-import secrets
-import time
 from urllib.parse import quote
 
 from fastmcp.tools import ToolResult
@@ -25,9 +23,9 @@ from courtlistener_mcp.lib.wiki_edits import (
     apply_edits,
     lf,
     render_preview,
+    store_proposal,
     without_nulls,
 )
-from courtlistener_mcp.session import WIKI_EDIT_TTL_SECONDS, get_session
 from courtlistener_mcp.tools.base import WikiTool
 
 
@@ -179,10 +177,7 @@ class WikiEditPageTool(WikiTool):
                 render_preview(new_source, new_url),
             )
 
-        token = secrets.token_urlsafe(24)
-        expires_at = int(time.time()) + WIKI_EDIT_TTL_SECONDS
-        await get_session().store_wiki_edit(
-            token,
+        token, expires_at = await store_proposal(
             {
                 "path": path,
                 "base_revision": base_revision,
@@ -192,8 +187,7 @@ class WikiEditPageTool(WikiTool):
                 else new_source,
                 "title": new_title,
                 **data_source,
-                "expires_at": expires_at,
-            },
+            }
         )
         diff_lines = list(
             difflib.unified_diff(

@@ -7,6 +7,7 @@ from fastmcp.server.auth.auth import AccessToken
 
 from courtlistener_mcp import session as session_module
 from courtlistener_mcp.exceptions import (
+    SessionUnavailableError,
     ToolArgumentValidationError,
     WikiAPIError,
     WikiToolError,
@@ -282,6 +283,29 @@ class TestCreate:
             await WikiCreatePageTool().call(CREATE | {"directory": "/"})
         assert wiki.writes == []
 
+    @pytest.mark.parametrize(
+        "directory",
+        ["/c/eng/", "#eng", "https://wiki.free.law/c/eng/", " eng "],
+    )
+    async def test_takes_the_directory_as_a_link_or_url(
+        self, sign_in, wiki, monkeypatch, directory
+    ):
+        monkeypatch.setattr(
+            wiki_module, "WIKI_BASE_URL", "https://wiki.free.law"
+        )
+        result = await WikiCreatePageTool().call(
+            CREATE | {"directory": directory}
+        )
+        assert result.meta[PROPOSAL_META_KEY]["path"] == "eng"
+
+    async def test_refuses_a_directory_url_off_the_wiki(self, sign_in, wiki):
+        with pytest.raises(
+            ToolArgumentValidationError, match="not a wiki directory URL"
+        ):
+            await WikiCreatePageTool().call(
+                CREATE | {"directory": "https://example.com/c/eng"}
+            )
+
 
 CRLF_PAGE = PAGE | {
     "content": "# Deploys\r\n\r\nShip on Tuesdays.\r\nNot Fridays.\r\n"
@@ -387,6 +411,21 @@ class TestSignIn:
             await tool.call(arguments)
         assert wiki.gets == [] and wiki.writes == []
 
+    async def test_needing_oauth_is_a_refusal_not_an_outage(
+        self, sign_in, wiki
+    ):
+        sign_in(access_token(kind=TokenKind.API))
+        with pytest.raises(WikiToolError) as exc:
+            await WikiEditPageTool().run(
+                {
+                    "path": "eng/deploys",
+                    "base_revision": 3,
+                    "change_message": "x",
+                    "content": "new",
+                }
+            )
+        assert exc.value.log_level == logging.WARNING
+
     async def test_another_user_cannot_save_the_proposal(self, sign_in, wiki):
         _, proposal = await propose({"content": "new"})
         sign_in(access_token("mallory"))
@@ -486,10 +525,14 @@ def test_wiki_refusals_are_warnings_and_outages_errors(status, level):
     assert WikiToolError("x", "wiki_edit_page", status).log_level == level
 
 
-def test_the_view_looks_for_the_retry_hint():
+def view_retry_hint():
+    """The ending the review view looks for to let the user save again."""
     html = asset_path("html/wiki-edit.html").read_text()
-    hint = html.split('const RETRY_HINT = "', 1)[1].split('"', 1)[0]
-    assert RETRY_HINT.endswith(hint)
+    return html.split('const RETRY_HINT = "', 1)[1].split('"', 1)[0]
+
+
+def test_the_view_looks_for_the_retry_hint():
+    assert RETRY_HINT.endswith(view_retry_hint())
 
 
 @pytest.mark.asyncio
@@ -517,3 +560,69 @@ async def test_a_create_is_retried_only_after_a_rate_limit(
     with pytest.raises(WikiAPIError) as exc:
         await WikiConfirmEditTool().call({"token": token})
     assert str(exc.value).endswith(RETRY_HINT) is kept
+
+
+class UnavailableSession(InMemorySession):
+    """A session whose store is down for the calls named in *failing*."""
+
+    def __init__(self, failing):
+        super().__init__()
+        self.failing = set(failing)
+
+    async def _set(self, key, value, ttl_seconds, *, degrade=True):
+        if "set" in self.failing and not degrade:
+            raise SessionUnavailableError("down")
+        await super()._set(key, value, ttl_seconds, degrade=degrade)
+
+    async def _pop(self, key, *, degrade=True):
+        if "pop" in self.failing and not degrade:
+            raise SessionUnavailableError("down")
+        return await super()._pop(key, degrade=degrade)
+
+
+@pytest.mark.asyncio
+class TestStoreOutage:
+    """Proposals aren't a cache: losing one to a store outage is reported,
+    never passed off as a proposal ready to save."""
+
+    async def test_a_proposal_that_cant_be_kept_is_an_error(
+        self, sign_in, wiki
+    ):
+        set_session(UnavailableSession({"set"}))
+        with pytest.raises(WikiAPIError, match="couldn't be kept") as exc:
+            await propose({"content": "new"})
+        assert exc.value.status == "store"
+
+    async def test_a_proposal_that_cant_be_read_can_be_saved_again(
+        self, sign_in, wiki
+    ):
+        session = UnavailableSession({"pop"})
+        set_session(session)
+        _, proposal = await propose({"content": "new"})
+        with pytest.raises(WikiAPIError) as exc:
+            await WikiConfirmEditTool().call({"token": proposal["token"]})
+        message = str(exc.value)
+        assert "is kept" not in message
+        assert message.endswith(view_retry_hint())
+        session.failing.clear()
+        await WikiConfirmEditTool().call({"token": proposal["token"]})
+        assert len(saves(wiki)) == 1
+
+    async def test_a_failed_save_that_cant_be_kept_says_so(
+        self, sign_in, wiki, monkeypatch
+    ):
+        session = UnavailableSession(set())
+        set_session(session)
+        _, proposal = await propose({"content": "new"})
+        session.failing.add("set")
+
+        async def locked(method, path, body):
+            raise WikiAPIError("locked", "409", code="locked")
+
+        set_wiki_write(monkeypatch, locked)
+        with pytest.raises(WikiAPIError) as exc:
+            await WikiConfirmEditTool().call({"token": proposal["token"]})
+        assert str(exc.value).endswith(
+            "couldn't be kept, so ask for it to be proposed again."
+        )
+        assert exc.value.code == "locked"

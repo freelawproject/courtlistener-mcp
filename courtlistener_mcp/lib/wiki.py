@@ -60,7 +60,8 @@ def wiki_oauth_token() -> AccessToken:
         raise WikiAPIError(
             "Editing the wiki needs an OAuth sign-in to this server, "
             "not an API token.",
-            "401",
+            # Not 401, which is kept for the wiki rejecting a sign-in.
+            "403",
         )
     return token
 
@@ -134,20 +135,23 @@ def wiki_page_url(path: str) -> str:
     return f"{WIKI_BASE_URL}/c/{path}"
 
 
-def page_path(value: str, tool_name: str) -> str:
+def page_path(
+    value: str, tool_name: str, argument: str = "path", what: str = "page"
+) -> str:
     """The wiki content path *value* names: a path, a page URL, or a link
     from page content (the wiki's ``#path`` syntax, or a site link
     ``/c/...``), less any query or ``#anchor``. A bare ``c/...`` is a path,
     under a directory ``c``. URLs and links arrive percent-encoded and are
     decoded, so the path isn't encoded twice on its way to the API; a plain
     path is taken literally. A *value* that names no page is reported as a
-    bad ``path`` argument to *tool_name*."""
+    bad *argument* to *tool_name*. Directories are named the same way, with
+    *what* ``"directory"``."""
 
     def invalid(message: str) -> ToolArgumentValidationError:
         return ToolArgumentValidationError(
             f"Invalid arguments for tool '{tool_name}':\n- {message}",
             tool_name=tool_name,
-            argument_names=["path"],
+            argument_names=[argument],
         )
 
     value = value.strip()
@@ -159,13 +163,13 @@ def page_path(value: str, tool_name: str) -> str:
         url.netloc != urlsplit(WIKI_BASE_URL).netloc
         or not url.path.startswith("/c/")
     ):
-        raise invalid(f"{value!r} is not a wiki page URL.")
+        raise invalid(f"{value!r} is not a wiki {what} URL.")
     path = unquote(url.path) if is_url or is_link else url.path
     if path.startswith("/c/"):
         path = path.removeprefix("/c/")
     path = path.strip("/")
     if not path:
-        raise invalid("`path` must name a wiki page.")
+        raise invalid(f"`{argument}` must name a wiki {what}.")
     return path
 
 

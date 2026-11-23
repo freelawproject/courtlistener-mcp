@@ -44,6 +44,11 @@ class SessionDataNotFoundError(ToolError):
         self.argument_name = argument_name
 
 
+class SessionUnavailableError(Exception):
+    """The session store couldn't be reached to keep or read state that
+    can't be treated as a cache miss, such as a proposed wiki change."""
+
+
 class UpstreamCourtListenerError(ToolError):
     """The upstream CL request failed: 5xx or transport error."""
 

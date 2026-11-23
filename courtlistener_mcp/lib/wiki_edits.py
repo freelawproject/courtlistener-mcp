@@ -2,11 +2,16 @@
 applying edits to a page's source, rendering previews, and the proposal
 the review view is sent."""
 
+import secrets
+import time
+
 from courtlistener_mcp.exceptions import (
+    SessionUnavailableError,
     ToolArgumentValidationError,
     WikiAPIError,
 )
 from courtlistener_mcp.lib.wiki import wiki_write
+from courtlistener_mcp.session import WIKI_EDIT_TTL_SECONDS, get_session
 
 # The key under the tool result's ``_meta`` that carries the proposed edit
 # to the review view. Hosts hand a result's ``_meta`` to the view, not to
@@ -17,6 +22,24 @@ PROPOSAL_META_KEY = "courtlistener/wikiEditProposal"
 # the proposal is kept, and the review view, which looks for this text,
 # lets the user click Save again.
 RETRY_HINT = "The change is kept, so you can try saving again."
+
+
+async def store_proposal(proposal: dict) -> tuple[str, int]:
+    """Keep *proposal* for the user to review, under a new single-use
+    token; returns the token and when the proposal expires."""
+    token = secrets.token_urlsafe(24)
+    expires_at = int(time.time()) + WIKI_EDIT_TTL_SECONDS
+    try:
+        await get_session().store_wiki_edit(
+            token, {**proposal, "expires_at": expires_at}
+        )
+    except SessionUnavailableError as exc:
+        raise WikiAPIError(
+            "The change couldn't be kept for review just now. Try again "
+            "in a moment.",
+            "store",
+        ) from exc
+    return token, expires_at
 
 
 def save_may_succeed_later(exc: WikiAPIError, action: str) -> bool:

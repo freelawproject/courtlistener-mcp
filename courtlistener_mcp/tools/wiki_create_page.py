@@ -1,6 +1,3 @@
-import secrets
-import time
-
 from fastmcp.tools import ToolResult
 from mcp.types import TextContent, ToolAnnotations
 
@@ -9,15 +6,16 @@ from courtlistener_mcp.lib.views import WIKI_EDIT_VIEW
 from courtlistener_mcp.lib.wiki import (
     DATA_SOURCE_FIELDS,
     DATA_SOURCE_PROPERTIES,
+    page_path,
     wiki_oauth_token,
     wiki_page_url,
 )
 from courtlistener_mcp.lib.wiki_edits import (
     PROPOSAL_META_KEY,
     render_preview,
+    store_proposal,
     without_nulls,
 )
-from courtlistener_mcp.session import WIKI_EDIT_TTL_SECONDS, get_session
 from courtlistener_mcp.tools.base import WikiTool
 
 
@@ -76,14 +74,18 @@ class WikiCreatePageTool(WikiTool):
     async def call_wiki(self, arguments: dict) -> ToolResult:
         wiki_oauth_token()
         arguments = without_nulls(arguments)
-        directory = arguments["directory"].strip("/")
-        if not directory:
+        if not arguments["directory"].strip().strip("/"):
             raise ToolArgumentValidationError(
                 "`directory` must name a directory: pages can't be created "
                 "at the top level.",
                 tool_name=self.name,
                 argument_names=["directory"],
             )
+        # Taken as a path, a URL or a link, as the other wiki tools take
+        # a page's.
+        directory = page_path(
+            arguments["directory"], self.name, "directory", "directory"
+        )
         data_source = {
             field: arguments[field]
             for field in DATA_SOURCE_FIELDS
@@ -94,10 +96,7 @@ class WikiCreatePageTool(WikiTool):
             content, data_source.get("data_source_url")
         )
 
-        token = secrets.token_urlsafe(24)
-        expires_at = int(time.time()) + WIKI_EDIT_TTL_SECONDS
-        await get_session().store_wiki_edit(
-            token,
+        token, expires_at = await store_proposal(
             {
                 "action": "create",
                 "directory": directory,
@@ -105,8 +104,7 @@ class WikiCreatePageTool(WikiTool):
                 "content": content,
                 "change_message": arguments["change_message"],
                 **data_source,
-                "expires_at": expires_at,
-            },
+            }
         )
         url = wiki_page_url(directory)
         summary = (

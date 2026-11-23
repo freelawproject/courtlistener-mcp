@@ -168,8 +168,8 @@
   <script type="module">{{ js/ext-apps-2.1.0.js }}</script>
   <script type="module">
     const PROPOSAL_KEY = "courtlistener/wikiEditProposal";
-    // Ends a failed save's error when the change is kept for another try;
-    // RETRY_HINT in wiki_edit_page_tool.py.
+    // Ends a failed save's error when another try may work; RETRY_HINT
+    // and the store messages in lib/wiki_edits.py and wiki_confirm_edit.py.
     const RETRY_HINT = "you can try saving again.";
     const $ = (id) => document.getElementById(id);
     const app = new globalThis.App({ name: "CourtListener wiki edit", version: "0.1.0" });
@@ -264,12 +264,39 @@
       setStatus("This proposal has expired. Ask for it to be proposed again.");
     }
 
+    // Only links with these schemes are kept in a preview or opened.
+    const SAFE_PROTOCOLS = ["http:", "https:", "mailto:"];
+    const URL_ATTRIBUTES = ["href", "src", "xlink:href", "action", "formaction", "poster", "background"];
+
+    // *value* resolved against *base*, or null unless it's a safe scheme.
+    // It's parsed first, as the browser would, so tricks such as a tab in
+    // "java\tscript:" or a leading control character can't hide a scheme.
+    // A bare #fragment is kept as is.
+    function safeUrl(value, base) {
+      if (value.trim().startsWith("#")) return value.trim();
+      try {
+        const url = new URL(value, base);
+        return SAFE_PROTOCOLS.includes(url.protocol) ? url.href : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // A clicked element's link target, from any element that has one:
+    // HTML <a> and <area>, SVG <a> (which may use xlink:href), and so on.
+    function linkTarget(node) {
+      if (!(node instanceof Element)) return null;
+      return node.getAttribute("href") ?? node.getAttributeNS("http://www.w3.org/1999/xlink", "href");
+    }
+
     // The wiki's rendered HTML, with its relative links pointed at the
     // wiki. Images become labeled links: the view can't load them, since
     // private uploads need a wiki sign-in. The wiki sanitizes the HTML;
     // as a second layer, it's parsed in an inert template, which runs and
     // loads nothing, and anything that could run is dropped before it's
-    // shown.
+    // shown: scripting elements, SVG animations (which can rewrite a
+    // link), event handlers, styles, and every URL that isn't http(s) or
+    // mailto.
     function renderPreview(host, html, origin) {
       const root = host.shadowRoot || host.attachShadow({ mode: "open" });
       const el = document.createElement("div");
@@ -283,25 +310,28 @@
       template.innerHTML = html;
       const page = template.content;
       for (const node of page.querySelectorAll(
-        "script, iframe, object, embed, link, meta, base, style, form"
+        "script, iframe, object, embed, link, meta, base, style, form, use, animate, animateMotion, animateTransform, set"
       )) node.remove();
       for (const node of page.querySelectorAll("*")) {
-        for (const { name, value } of [...node.attributes]) {
-          const scripted = /^\s*(javascript|data|vbscript):/i.test(value);
-          if (name.startsWith("on") || (["href", "src", "xlink:href"].includes(name) && scripted)) {
-            node.removeAttribute(name);
+        for (const attr of [...node.attributes]) {
+          const name = attr.name.toLowerCase();
+          // The wiki allows no styles, and one could lay preview content
+          // over the view's buttons (a shadow root doesn't contain fixed
+          // positioning).
+          if (name.startsWith("on") || name === "style") {
+            node.removeAttributeNode(attr);
+          } else if (URL_ATTRIBUTES.includes(name)) {
+            const url = safeUrl(attr.value, origin);
+            if (url === null) node.removeAttributeNode(attr);
+            else attr.value = url;
           }
         }
-      }
-      for (const a of page.querySelectorAll("a[href]")) {
-        const href = a.getAttribute("href");
-        if (href.startsWith("#")) continue;
-        a.href = new URL(href, origin).href;
       }
       for (const img of page.querySelectorAll("img")) {
         const link = document.createElement("a");
         link.className = "image";
-        link.href = new URL(img.getAttribute("src") || "", origin).href;
+        const src = img.getAttribute("src");
+        if (src) link.href = src;
         link.textContent = `Image: ${img.alt || "untitled"}`;
         img.replaceWith(link);
       }
@@ -311,11 +341,9 @@
     // A click in a preview reaches here from its shadow root, so the link
     // is found along the event's path.
     document.addEventListener("click", (event) => {
-      const a = event.composedPath().find(
-        (node) => node instanceof HTMLAnchorElement && node.hasAttribute("href")
-      );
+      const a = event.composedPath().find((node) => linkTarget(node) != null);
       if (!a) return;
-      const href = a.getAttribute("href");
+      const href = linkTarget(a).trim();
       if (href.startsWith("#")) {
         // Fragment links don't reach into a shadow root, so a preview's
         // own anchors (a table of contents, say) are scrolled to here.
@@ -329,7 +357,9 @@
         return;
       }
       event.preventDefault();
-      app.openLink({ url: a.href }).catch(() => window.open(a.href, "_blank"));
+      const url = safeUrl(href, document.baseURI);
+      if (url === null) return;
+      app.openLink({ url }).catch(() => window.open(url, "_blank", "noopener"));
     });
 
     // How the messages to the model name the change.
