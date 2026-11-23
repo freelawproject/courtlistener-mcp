@@ -6,10 +6,8 @@ import httpx
 import pytest
 from courtlistener.exceptions import CourtListenerAPIError
 
-from courtlistener_mcp.tools.pray_for_document_tool import (
-    PrayForDocumentTool,
-)
-from courtlistener_mcp.tools.withdraw_prayer_tool import WithdrawPrayerTool
+from courtlistener_mcp.tools.pray_for_document import PrayForDocumentTool
+from courtlistener_mcp.tools.withdraw_prayer import WithdrawPrayerTool
 
 pytestmark = pytest.mark.asyncio
 

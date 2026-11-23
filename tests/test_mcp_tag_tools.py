@@ -6,13 +6,13 @@ import httpx
 import pytest
 from courtlistener.exceptions import CourtListenerAPIError
 
-from courtlistener_mcp.tools.add_docket_to_tag_tool import AddDocketToTagTool
-from courtlistener_mcp.tools.create_tag_tool import CreateTagTool
-from courtlistener_mcp.tools.delete_tag_tool import DeleteTagTool
-from courtlistener_mcp.tools.remove_docket_from_tag_tool import (
+from courtlistener_mcp.tools.add_docket_to_tag import AddDocketToTagTool
+from courtlistener_mcp.tools.create_tag import CreateTagTool
+from courtlistener_mcp.tools.delete_tag import DeleteTagTool
+from courtlistener_mcp.tools.remove_docket_from_tag import (
     RemoveDocketFromTagTool,
 )
-from courtlistener_mcp.tools.update_tag_tool import UpdateTagTool
+from courtlistener_mcp.tools.update_tag import UpdateTagTool
 
 pytestmark = pytest.mark.asyncio
 

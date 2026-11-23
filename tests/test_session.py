@@ -16,7 +16,6 @@ from redis.exceptions import ConnectionError as RedisConnectionError
 from redis.exceptions import ResponseError
 from redis.exceptions import TimeoutError as RedisTimeoutError
 
-from courtlistener_mcp.auth_types import TokenKind
 from courtlistener_mcp.session import (
     InMemorySession,
     RedisSession,
@@ -31,6 +30,7 @@ from courtlistener_mcp.settings import (
     REDIS_CONNECT_TIMEOUT_SECONDS,
     REDIS_SOCKET_TIMEOUT_SECONDS,
 )
+from courtlistener_mcp.tokens import TokenKind
 
 
 @pytest.fixture(autouse=True)

@@ -13,13 +13,9 @@ import httpx
 import pytest
 from courtlistener.exceptions import CourtListenerAPIError
 
-from courtlistener_mcp.tools.create_search_alert_tool import (
-    CreateSearchAlertTool,
-)
-from courtlistener_mcp.tools.delete_search_alert_tool import (
-    DeleteSearchAlertTool,
-)
-from courtlistener_mcp.tools.subscribe_to_docket_alert_tool import (
+from courtlistener_mcp.tools.create_search_alert import CreateSearchAlertTool
+from courtlistener_mcp.tools.delete_search_alert import DeleteSearchAlertTool
+from courtlistener_mcp.tools.subscribe_to_docket_alert import (
     SubscribeToDocketAlertTool,
 )
 

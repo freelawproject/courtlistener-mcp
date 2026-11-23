@@ -15,17 +15,14 @@ from fastmcp.server.auth.auth import AccessToken
 from key_value.aio.stores.memory import MemoryStore
 from redis.exceptions import ConnectionError as RedisConnectionError
 
-from courtlistener_mcp.auth import (
-    ApiTokenVerifier,
+from courtlistener_mcp.auth.proxy import (
     CourtListenerAuthBackend,
     CourtListenerOAuthProxy,
+)
+from courtlistener_mcp.auth.verifiers import (
+    ApiTokenVerifier,
     OAuthTokenVerifier,
     cache_ttl,
-)
-from courtlistener_mcp.auth_types import (
-    NO_CLIENT_ID,
-    UNKNOWN_CLIENT_ID,
-    TokenKind,
 )
 from courtlistener_mcp.session import (
     InMemorySession,
@@ -35,6 +32,7 @@ from courtlistener_mcp.session import (
     set_session,
 )
 from courtlistener_mcp.settings import OAUTH_INTROSPECTION_URL
+from courtlistener_mcp.tokens import NO_CLIENT_ID, UNKNOWN_CLIENT_ID, TokenKind
 
 
 def run(coro):
@@ -60,7 +58,7 @@ class TestMCPToolGetClient:
         """With a FastMCP AccessToken available, use Bearer auth."""
         tool = self._get_tool()
         with patch(
-            "courtlistener_mcp.tools.mcp_tool.get_access_token",
+            "courtlistener_mcp.tools.base.get_access_token",
             return_value=self._verified(
                 "oauth-jwt", token_kind=TokenKind.OAUTH
             ),
@@ -74,7 +72,7 @@ class TestMCPToolGetClient:
         scheme — CL rejects an API token presented as Bearer."""
         tool = self._get_tool()
         with patch(
-            "courtlistener_mcp.tools.mcp_tool.get_access_token",
+            "courtlistener_mcp.tools.base.get_access_token",
             return_value=self._verified(
                 "cl-api-token", token_kind=TokenKind.API
             ),
@@ -89,7 +87,7 @@ class TestMCPToolGetClient:
         treated as OAuth rather than silently mis-schemed."""
         tool = self._get_tool()
         with patch(
-            "courtlistener_mcp.tools.mcp_tool.get_access_token",
+            "courtlistener_mcp.tools.base.get_access_token",
             return_value=self._verified("oauth-jwt"),
         ):
             cl = tool.get_client()
@@ -102,7 +100,7 @@ class TestMCPToolGetClient:
         tool = self._get_tool()
         with (
             patch(
-                "courtlistener_mcp.tools.mcp_tool.get_access_token",
+                "courtlistener_mcp.tools.base.get_access_token",
                 return_value=None,
             ),
             patch.dict(
@@ -132,7 +130,7 @@ def patch_http(response=None, side_effect=None):
     ctx.__aenter__ = AsyncMock(return_value=http)
     ctx.__aexit__ = AsyncMock(return_value=False)
     return patch(
-        "courtlistener_mcp.auth.httpx.AsyncClient", return_value=ctx
+        "courtlistener_mcp.auth.verifiers.httpx.AsyncClient", return_value=ctx
     ), http
 
 
@@ -155,8 +153,14 @@ class TestVerifyOauthToken:
     @pytest.fixture(autouse=True)
     def client_credentials(self):
         with (
-            patch("courtlistener_mcp.auth.OAUTH_CLIENT_ID", "mcp-client"),
-            patch("courtlistener_mcp.auth.OAUTH_CLIENT_SECRET", "mcp-secret"),
+            patch(
+                "courtlistener_mcp.auth.verifiers.OAUTH_CLIENT_ID",
+                "mcp-client",
+            ),
+            patch(
+                "courtlistener_mcp.auth.verifiers.OAUTH_CLIENT_SECRET",
+                "mcp-secret",
+            ),
         ):
             yield
 
@@ -222,7 +226,7 @@ class TestVerifyOauthToken:
         client_patch, _ = patch_http(http_response(status, ACTIVE))
         with (
             client_patch,
-            caplog.at_level("ERROR", "courtlistener_mcp.auth"),
+            caplog.at_level("ERROR", "courtlistener_mcp.auth.verifiers"),
         ):
             run(OAuthTokenVerifier().check("tok"))
         assert any(r.levelname == "ERROR" for r in caplog.records)
@@ -248,7 +252,9 @@ class TestVerifyOauthToken:
         client_patch, http = patch_http(http_response(200, ACTIVE))
         with (
             client_patch,
-            patch("courtlistener_mcp.auth.OAUTH_CLIENT_SECRET", None),
+            patch(
+                "courtlistener_mcp.auth.verifiers.OAUTH_CLIENT_SECRET", None
+            ),
         ):
             assert run(OAuthTokenVerifier().check("tok")) is None
         http.post.assert_not_awaited()
@@ -260,8 +266,13 @@ class TestCacheTtl:
     @pytest.fixture(autouse=True)
     def frozen_clock(self):
         with (
-            patch("courtlistener_mcp.auth.time.time", return_value=1_000),
-            patch("courtlistener_mcp.auth.TOKEN_CACHE_TTL_SECONDS", 600),
+            patch(
+                "courtlistener_mcp.auth.verifiers.time.time",
+                return_value=1_000,
+            ),
+            patch(
+                "courtlistener_mcp.auth.verifiers.TOKEN_CACHE_TTL_SECONDS", 600
+            ),
         ):
             yield
 
@@ -396,7 +407,8 @@ class TestCachedTokenVerifier:
     def test_verifies_and_caches_on_a_miss(self):
         verify = AsyncMock(return_value={"user_hash": "uh"})
         with patch(
-            "courtlistener_mcp.auth.OAuthTokenVerifier.check", new=verify
+            "courtlistener_mcp.auth.verifiers.OAuthTokenVerifier.check",
+            new=verify,
         ):
             token = run(OAuthTokenVerifier().verify_token("tok"))
         assert token is not None
@@ -415,7 +427,8 @@ class TestCachedTokenVerifier:
         AS/API disagreement)."""
         verify = AsyncMock(return_value={"user_hash": "uh"})
         with patch(
-            "courtlistener_mcp.auth.OAuthTokenVerifier.check", new=verify
+            "courtlistener_mcp.auth.verifiers.OAuthTokenVerifier.check",
+            new=verify,
         ):
             run(OAuthTokenVerifier().verify_token("tok"))
             token = run(OAuthTokenVerifier().verify_token("tok"))
@@ -432,11 +445,11 @@ class TestCachedTokenVerifier:
         verify_api = AsyncMock(return_value=None)
         with (
             patch(
-                "courtlistener_mcp.auth.OAuthTokenVerifier.check",
+                "courtlistener_mcp.auth.verifiers.OAuthTokenVerifier.check",
                 new=verify_oauth,
             ),
             patch(
-                "courtlistener_mcp.auth.ApiTokenVerifier.check",
+                "courtlistener_mcp.auth.verifiers.ApiTokenVerifier.check",
                 new=verify_api,
             ),
         ):
@@ -449,11 +462,11 @@ class TestCachedTokenVerifier:
         verify_api = AsyncMock(return_value={"user_hash": "api-uh"})
         with (
             patch(
-                "courtlistener_mcp.auth.OAuthTokenVerifier.check",
+                "courtlistener_mcp.auth.verifiers.OAuthTokenVerifier.check",
                 new=verify_oauth,
             ),
             patch(
-                "courtlistener_mcp.auth.ApiTokenVerifier.check",
+                "courtlistener_mcp.auth.verifiers.ApiTokenVerifier.check",
                 new=verify_api,
             ),
         ):
@@ -474,7 +487,7 @@ class TestCachedTokenVerifier:
         )
         set_session(session)
         with patch(
-            "courtlistener_mcp.auth.OAuthTokenVerifier.check",
+            "courtlistener_mcp.auth.verifiers.OAuthTokenVerifier.check",
             new=AsyncMock(return_value=info),
         ):
             run(OAuthTokenVerifier().verify_token("tok"))
@@ -484,7 +497,7 @@ class TestCachedTokenVerifier:
 
     def test_failed_verification_is_not_cached(self):
         with patch(
-            "courtlistener_mcp.auth.OAuthTokenVerifier.check",
+            "courtlistener_mcp.auth.verifiers.OAuthTokenVerifier.check",
             new=AsyncMock(return_value=None),
         ):
             assert run(OAuthTokenVerifier().verify_token("tok")) is None
@@ -495,7 +508,8 @@ class TestCachedTokenVerifier:
     def test_empty_token_costs_no_round_trip(self):
         verify = AsyncMock()
         with patch(
-            "courtlistener_mcp.auth.OAuthTokenVerifier.check", new=verify
+            "courtlistener_mcp.auth.verifiers.OAuthTokenVerifier.check",
+            new=verify,
         ):
             assert run(OAuthTokenVerifier().verify_token("")) is None
         verify.assert_not_awaited()
@@ -513,7 +527,7 @@ class TestCachedTokenVerifier:
         )
         set_session(session)
         with patch(
-            "courtlistener_mcp.auth.OAuthTokenVerifier.check",
+            "courtlistener_mcp.auth.verifiers.OAuthTokenVerifier.check",
             new=AsyncMock(return_value={"user_hash": "uh"}),
         ):
             token = run(OAuthTokenVerifier().verify_token("tok"))
@@ -554,7 +568,7 @@ class TestCachedTokenVerifier:
         token's own scopes and rejects it once ``expires_at`` passes,
         so both must come from introspection, not be echoed back."""
         with patch(
-            "courtlistener_mcp.auth.OAuthTokenVerifier.check",
+            "courtlistener_mcp.auth.verifiers.OAuthTokenVerifier.check",
             new=AsyncMock(
                 return_value={
                     "user_hash": "uh",
@@ -573,7 +587,7 @@ class TestCachedTokenVerifier:
         middleware's ``api`` check rejects it; only an API token, which
         records no ``scopes`` at all, gets the required set."""
         with patch(
-            "courtlistener_mcp.auth.OAuthTokenVerifier.check",
+            "courtlistener_mcp.auth.verifiers.OAuthTokenVerifier.check",
             new=AsyncMock(
                 return_value={
                     "user_hash": "uh",
@@ -588,7 +602,7 @@ class TestCachedTokenVerifier:
 
     def test_api_tokens_are_granted_the_required_scopes(self):
         with patch(
-            "courtlistener_mcp.auth.ApiTokenVerifier.check",
+            "courtlistener_mcp.auth.verifiers.ApiTokenVerifier.check",
             new=AsyncMock(return_value={"user_hash": "uh"}),
         ):
             token = run(ApiTokenVerifier().verify_token("tok"))
@@ -611,7 +625,7 @@ class TestServerAuthWiring:
             AuthenticationMiddleware,
         )
 
-        import courtlistener_mcp.server as server_mod
+        import courtlistener_mcp.server.main as server_mod
         import courtlistener_mcp.settings as settings_mod
 
         assert not hasattr(settings_mod, "MCP_REQUIRE_OAUTH")
@@ -630,7 +644,7 @@ class TestServerAuthWiring:
     def test_http_app_requires_the_client_credentials(self):
         """There is no OAuth without the server's own CourtListener
         application: it is the client in every upstream exchange."""
-        import courtlistener_mcp.server as server_mod
+        import courtlistener_mcp.server.main as server_mod
 
         with (
             patch.object(server_mod, "REDIS_URL", "redis://localhost:6379"),
@@ -643,7 +657,7 @@ class TestServerAuthWiring:
         """Bare ``create_mcp_server`` wires no auth — the HTTP factory
         attaches it explicitly, which is what keeps stdio (``main``)
         credential-free."""
-        from courtlistener_mcp.server import create_mcp_server
+        from courtlistener_mcp.server.main import create_mcp_server
 
         mcp = create_mcp_server()
         # FastMCP exposes its auth provider via ``auth`` (or ``_auth``
@@ -903,7 +917,7 @@ class TestCourtListenerOAuthProxy:
         stops issuing them; the proxy verifies those by introspection."""
         proxy = _auth_provider()
         with patch(
-            "courtlistener_mcp.auth.OAuthTokenVerifier.check",
+            "courtlistener_mcp.auth.verifiers.OAuthTokenVerifier.check",
             new=AsyncMock(return_value={"user_hash": "uh", "scopes": ["api"]}),
         ):
             access = run(proxy.load_access_token("kzzpskQh6z" * 3))
@@ -918,7 +932,8 @@ class TestCourtListenerOAuthProxy:
         proxy = _auth_provider()
         check = AsyncMock(return_value={"user_hash": "uh"})
         with patch(
-            "courtlistener_mcp.auth.OAuthTokenVerifier.check", new=check
+            "courtlistener_mcp.auth.verifiers.OAuthTokenVerifier.check",
+            new=check,
         ):
             assert run(proxy.load_access_token("aaa.bbb.ccc")) is None
         check.assert_not_awaited()
@@ -1069,8 +1084,8 @@ class TestAuthOverHttp:
     def _app(self):
         from starlette.testclient import TestClient
 
-        from courtlistener_mcp.auth import admit_token_scheme
-        from courtlistener_mcp.server import create_mcp_server
+        from courtlistener_mcp.auth.proxy import admit_token_scheme
+        from courtlistener_mcp.server.main import create_mcp_server
 
         # Mirrors create_http_app's wiring, minus the Redis store.
         mcp = create_mcp_server(auth=_auth_provider())
@@ -1107,11 +1122,11 @@ class TestAuthOverHttp:
         )
         return (
             patch(
-                "courtlistener_mcp.auth.CourtListenerOAuthProxy.verify_token",
+                "courtlistener_mcp.auth.proxy.CourtListenerOAuthProxy.verify_token",
                 new=AsyncMock(return_value=bearer if oauth_ok else None),
             ),
             patch(
-                "courtlistener_mcp.auth.ApiTokenVerifier.check",
+                "courtlistener_mcp.auth.verifiers.ApiTokenVerifier.check",
                 new=AsyncMock(
                     return_value={"user_hash": "uh"} if api_ok else None
                 ),
@@ -1184,7 +1199,7 @@ class TestHealthEndpoint:
         when the HTTP app has an OAuth ``AuthProvider`` attached."""
         from starlette.testclient import TestClient
 
-        from courtlistener_mcp.server import create_mcp_server
+        from courtlistener_mcp.server.main import create_mcp_server
 
         # Skip create_http_app (it requires REDIS_URL); we only care
         # that /health routes through FastMCP's starlette app
@@ -1211,7 +1226,7 @@ class TestOpenAIAppsChallenge:
         has an OAuth ``AuthProvider`` attached."""
         from starlette.testclient import TestClient
 
-        from courtlistener_mcp.server import create_mcp_server
+        from courtlistener_mcp.server.main import create_mcp_server
         from courtlistener_mcp.settings import OPENAI_APPS_CHALLENGE_TOKEN
 
         token = OPENAI_APPS_CHALLENGE_TOKEN

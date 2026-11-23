@@ -4,7 +4,7 @@
 
 **Remove Docket from Tag**
 
-- **Source:** `courtlistener_mcp/tools/remove_docket_from_tag_tool.py`
+- **Source:** `courtlistener_mcp/tools/remove_docket_from_tag.py`
 - **Estimated definition size:** ~265 tokens (description ~81, input schema ~95; cl100k_base)
 - **Parameters:** 2 (2 required)
 - **Raw input schema:** [`remove_docket_from_tag.inputs.json`](./remove_docket_from_tag.inputs.json)

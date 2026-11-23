@@ -4,7 +4,7 @@
 
 **Create Tag**
 
-- **Source:** `courtlistener_mcp/tools/create_tag_tool.py`
+- **Source:** `courtlistener_mcp/tools/create_tag.py`
 - **Estimated definition size:** ~338 tokens (description ~93, input schema ~166; cl100k_base)
 - **Parameters:** 4 (1 required)
 - **Raw input schema:** [`create_tag.inputs.json`](./create_tag.inputs.json)

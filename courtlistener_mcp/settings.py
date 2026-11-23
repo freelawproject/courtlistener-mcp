@@ -1,3 +1,5 @@
+"""Settings, read from the environment."""
+
 import base64
 import hashlib
 import logging

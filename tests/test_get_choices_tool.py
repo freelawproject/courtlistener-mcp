@@ -10,12 +10,12 @@ import pytest
 from courtlistener.models import ENDPOINTS
 from fastmcp.exceptions import ToolError
 
-from courtlistener_mcp.tools import MCP_TOOLS
-from courtlistener_mcp.tools.utils import (
+from courtlistener_mcp.lib.schema import (
     LONG_CHOICE_FIELDS,
     is_long_choice_field,
     long_choices,
 )
+from courtlistener_mcp.tools import MCP_TOOLS
 
 # Above this many choices a field must be curated (or consciously left
 # inline) rather than silently enumerated into every schema.

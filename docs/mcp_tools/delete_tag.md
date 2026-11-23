@@ -4,7 +4,7 @@
 
 **Delete Tag**
 
-- **Source:** `courtlistener_mcp/tools/delete_tag_tool.py`
+- **Source:** `courtlistener_mcp/tools/delete_tag.py`
 - **Estimated definition size:** ~215 tokens (description ~67, input schema ~69; cl100k_base)
 - **Parameters:** 1 (1 required)
 - **Raw input schema:** [`delete_tag.inputs.json`](./delete_tag.inputs.json)

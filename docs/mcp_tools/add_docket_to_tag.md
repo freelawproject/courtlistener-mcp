@@ -4,7 +4,7 @@
 
 **Add Docket to Tag**
 
-- **Source:** `courtlistener_mcp/tools/add_docket_to_tag_tool.py`
+- **Source:** `courtlistener_mcp/tools/add_docket_to_tag.py`
 - **Estimated definition size:** ~254 tokens (description ~70, input schema ~95; cl100k_base)
 - **Parameters:** 2 (2 required)
 - **Raw input schema:** [`add_docket_to_tag.inputs.json`](./add_docket_to_tag.inputs.json)
