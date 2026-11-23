@@ -374,10 +374,14 @@
       $("status").className = `status ${cls}`;
     }
 
+    function setButtons(enabled) {
+      $("save").disabled = !enabled;
+      $("discard").disabled = !enabled;
+    }
+
     function finish() {
       finished = true;
-      $("save").disabled = true;
-      $("discard").disabled = true;
+      setButtons(false);
     }
 
     async function tellModel(text) {
@@ -394,7 +398,8 @@
 
     $("save").addEventListener("click", async () => {
       if (!proposal || finished) return;
-      $("save").disabled = true;
+      // Discard can't stop a save in flight, so it waits with Save.
+      setButtons(false);
       setStatus("Saving…");
       try {
         const result = await app.callServerTool({
@@ -409,7 +414,7 @@
         if (!page || !(page.revision || page.path)) {
           setStatus(text || "The wiki refused the change.", "error");
           if (text.endsWith(RETRY_HINT)) {
-            $("save").disabled = false;
+            setButtons(true);
             return;
           }
           finish();
@@ -422,7 +427,7 @@
           : `Saved as revision ${page.revision ?? "?"}.`, "ok");
         await tellModel(`The user saved ${what()}; it is now revision ${page.revision ?? "?"} at path ${page.path ?? proposal.path}.`);
       } catch (e) {
-        $("save").disabled = false;
+        setButtons(true);
         setStatus(`Couldn't reach the server: ${e.message || e}`, "error");
       }
     });

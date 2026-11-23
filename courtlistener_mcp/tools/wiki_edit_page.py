@@ -24,6 +24,7 @@ from courtlistener_mcp.lib.wiki_edits import (
     lf,
     render_preview,
     store_proposal,
+    with_final_newline_of,
     without_nulls,
 )
 from courtlistener_mcp.tools.base import WikiTool
@@ -145,6 +146,7 @@ class WikiEditPageTool(WikiTool):
             new_source = apply_edits(old_source, arguments["edits"], self.name)
         else:
             new_source = lf(arguments.get("content", old_source))
+        new_source = with_final_newline_of(old_source, new_source)
         new_title = arguments.get("title", page["title"])
         # Only the data source settings sent that differ from the page's.
         data_source = {

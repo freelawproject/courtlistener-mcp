@@ -214,7 +214,8 @@ class TestConfirm:
                 {
                     "base_revision": 3,
                     "change_message": "x",
-                    "content": "new",
+                    # The page's final newline is kept.
+                    "content": "new\n",
                     "title": "Deploys",
                 },
             )
@@ -507,6 +508,33 @@ async def test_the_proposal_reaches_the_view_through_handle(sign_in, wiki):
     assert (
         result.meta[PROPOSAL_META_KEY]["token"] not in result.content[0].text
     )
+
+
+@pytest.mark.asyncio
+class TestFinalNewline:
+    """Whether a page ends in a newline doesn't show in the diff, so the
+    page keeps its own."""
+
+    async def test_dropping_only_the_final_newline_is_no_change(
+        self, sign_in, wiki
+    ):
+        with pytest.raises(ToolArgumentValidationError, match="Nothing to"):
+            await propose({"content": PAGE["content"].removesuffix("\n")})
+
+    async def test_new_content_keeps_the_pages_final_newline(
+        self, sign_in, wiki
+    ):
+        _, proposal = await propose({"content": "# Deploys\n\nDaily."})
+        assert proposal["new_source"] == "# Deploys\n\nDaily.\n"
+
+    async def test_a_page_without_one_doesnt_gain_one(self, sign_in, wiki):
+        wiki.page = PAGE | {"content": "a\nb"}
+        _, proposal = await propose({"content": "a\nc\n"})
+        assert proposal["new_source"] == "a\nc"
+
+    async def test_trailing_blank_lines_still_count(self, sign_in, wiki):
+        _, proposal = await propose({"content": PAGE["content"] + "\n"})
+        assert proposal["new_source"] == PAGE["content"] + "\n"
 
 
 @pytest.mark.asyncio

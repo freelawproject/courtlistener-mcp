@@ -86,6 +86,17 @@ async def render_preview(
         return None
 
 
+def with_final_newline_of(old: str, new: str) -> str:
+    """*new* ending in a newline exactly when *old* does. Whether a page
+    ends in one is invisible in a line diff and the review view, so the
+    page keeps its own, and a change that only adds or drops it is no
+    change at all."""
+    if not new:
+        return new
+    body = new.removesuffix("\n")
+    return body + "\n" if old.endswith("\n") else body
+
+
 def apply_edits(
     content: str, edits: list[dict], tool_name: str = "wiki_edit_page"
 ) -> str:
