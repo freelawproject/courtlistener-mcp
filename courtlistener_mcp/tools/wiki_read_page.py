@@ -1,13 +1,9 @@
-from urllib.parse import quote, unquote, urlsplit
+from urllib.parse import quote
 
 from mcp.types import ToolAnnotations
 
-from courtlistener_mcp.exceptions import (
-    ToolArgumentValidationError,
-    WikiAPIError,
-)
-from courtlistener_mcp.lib.wiki import tidy_page, wiki_get
-from courtlistener_mcp.settings import WIKI_BASE_URL
+from courtlistener_mcp.exceptions import WikiAPIError
+from courtlistener_mcp.lib.wiki import page_path, tidy_page, wiki_get
 from courtlistener_mcp.tools.base import WikiTool
 
 
@@ -19,8 +15,11 @@ class WikiReadPageTool(WikiTool):
     found in page content, such as `/c/engineering/deploys/`. An
     `#anchor` on any of them is ignored. Returns the page's path, title,
     description, `updated_at`, `url` and its `content` as Markdown, with
-    data placeholders filled in and wiki links resolved. Directories
-    aren't pages: to see a directory's pages, search it with
+    data placeholders filled in and wiki links resolved. It also gives
+    the page's `revision` and whether you `can_edit` it; if you can, it
+    gives the page's data source too (`data_source_url`, the JSON its
+    `[[ key ]]` placeholders are filled from, and `data_source_ttl`).
+    Directories aren't pages: to see a directory's pages, search it with
     `in:<directory path>`.
     """
 
@@ -60,40 +59,8 @@ class WikiReadPageTool(WikiTool):
             "additionalProperties": False,
         }
 
-    def page_path(self, value: str) -> str:
-        """The wiki content path *value* names: a path, a page URL, or a
-        link from page content (the wiki's ``#path`` syntax, or a site
-        link ``/c/...``), less any query or ``#anchor``. A bare ``c/...``
-        is a path, under a directory ``c``. URLs and links arrive
-        percent-encoded and are decoded, so the path isn't encoded twice
-        on its way to the API; a plain path is taken literally."""
-        value = value.strip()
-        is_link = value.startswith(("#", "/c/"))
-        value = value.removeprefix("#")
-        url = urlsplit(value)
-        is_url = bool(url.scheme or url.netloc)
-        if is_url and (
-            url.netloc != urlsplit(WIKI_BASE_URL).netloc
-            or not url.path.startswith("/c/")
-        ):
-            raise self.invalid_path(f"{value!r} is not a wiki page URL.")
-        path = unquote(url.path) if is_url or is_link else url.path
-        if path.startswith("/c/"):
-            path = path.removeprefix("/c/")
-        path = path.strip("/")
-        if not path:
-            raise self.invalid_path("`path` must name a wiki page.")
-        return path
-
-    def invalid_path(self, message: str) -> ToolArgumentValidationError:
-        return ToolArgumentValidationError(
-            f"Invalid arguments for tool '{self.name}':\n- {message}",
-            tool_name=self.name,
-            argument_names=["path"],
-        )
-
     async def call_wiki(self, arguments: dict) -> dict:
-        path = self.page_path(arguments["path"])
+        path = page_path(arguments["path"], self.name)
         params = {"raw": "true"} if arguments.get("raw") else {}
         try:
             page = await wiki_get(f"pages/{quote(path, safe='/')}", **params)

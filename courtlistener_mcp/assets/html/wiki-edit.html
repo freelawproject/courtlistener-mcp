@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review wiki edit</title>
+<style>
+{{ css/base.css }}
+  /* Diff colors, in the light and dark themes. */
+  :root {
+    --add-bg: #e6f4ea; --add-fg: #1e6b34; --del-bg: #fbe9e7; --del-fg: #a3271a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --add-bg: #17301f; --add-fg: #7fd197; --del-bg: #3a1c18; --del-fg: #f2a093;
+    }
+  }
+  :root[data-theme="dark"] {
+    --add-bg: #17301f; --add-fg: #7fd197; --del-bg: #3a1c18; --del-fg: #f2a093;
+  }
+  /* The padding sits on a wrapper rather than the body, so it shows the
+     same in every host: some override the body's padding, and the SDK
+     sizes the frame from the whole document either way. */
+  html, body { margin: 0; padding: 0; }
+  body { font-size: 15px; }
+  .frame { padding: 16px; }
+  header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  header img { width: 24px; height: 24px; flex: none; }
+  h1 { font-size: 1.1rem; margin: 0; }
+  .meta { color: var(--muted); font-size: 0.875rem; margin-bottom: 12px; word-break: break-word; }
+  .data-source {
+    margin-bottom: 12px; padding: 8px 12px; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 3px;
+    font-size: 0.875rem; word-break: break-all;
+  }
+  .tabs {
+    display: flex; gap: 16px; border-bottom: 1px solid var(--border);
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .tab {
+    background: none; border: none; border-bottom: 2px solid transparent;
+    padding: 6px 2px; margin-bottom: -1px; cursor: pointer;
+    color: var(--muted); font: inherit; white-space: nowrap;
+  }
+  .tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+  pre {
+    margin: 12px 0 0; padding: 8px 0; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 3px;
+    max-height: 420px; overflow: auto;
+    font: 12px/1.5 var(--mono);
+  }
+  pre span { display: block; padding: 0 12px; white-space: pre-wrap; }
+  /* The sources are plain text, not lines, so they take the diff lines'
+     padding. */
+  #new-source, #old-source { padding: 8px 12px; white-space: pre-wrap; }
+  .add { background: var(--add-bg); color: var(--add-fg); }
+  .del { background: var(--del-bg); color: var(--del-fg); }
+  .hunk, .file { color: var(--muted); }
+  .actions { display: flex; gap: 8px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+  button.action {
+    font: inherit; padding: 6px 14px; border-radius: 3px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--bg); color: var(--fg);
+  }
+  button.primary {
+    background: var(--accent); color: var(--accent-fg); border-color: var(--accent);
+  }
+  button.action:disabled { opacity: 0.5; cursor: default; }
+  .status { color: var(--muted); font-size: 0.875rem; margin-right: auto; }
+  .status.error { color: var(--del-fg); }
+  .status.ok { color: var(--add-fg); }
+  /* Rendered page content; its own styles are in #preview-style. */
+  .preview {
+    margin: 12px 0 0; padding: 4px 16px; border: 1px solid var(--border);
+    border-radius: 3px; max-height: 420px; overflow: auto;
+    font-size: 15px; line-height: 1.6; word-wrap: break-word;
+  }
+</style>
+</head>
+<body>
+
+  <!-- Styles for the rendered previews. Each preview lives in its own
+       shadow root, so the page's HTML can't reach the view's elements
+       (a heading's id can't take over the Save button's) and the
+       view's styles don't leak into it. -->
+  <template id="preview-style"><style>
+  a { color: var(--accent); }
+  .unavailable { color: var(--muted); font-style: italic; }
+  .content > :first-child { margin-top: 12px; }
+  h1, h2, h3, h4 { line-height: 1.3; margin: 1.2em 0 0.5em; }
+  h1 { font-size: 1.5em; } h2 { font-size: 1.3em; }
+  h3 { font-size: 1.1em; } h4 { font-size: 1em; }
+  p, ul, ol, table, pre, details { margin: 0.75em 0; }
+  ul, ol { padding-left: 1.5em; }
+  code {
+    background: var(--panel); padding: 0.1em 0.3em; border-radius: 3px;
+    font: 0.9em var(--mono);
+  }
+  pre {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 3px;
+    padding: 8px 12px; white-space: pre-wrap; overflow-x: auto; font: 12px/1.5 var(--mono);
+  }
+  pre code { background: none; padding: 0; }
+  blockquote { margin: 0.75em 0; padding-left: 1em; border-left: 3px solid var(--border); color: var(--muted); }
+  table { border-collapse: collapse; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: 4px 10px; text-align: left; }
+  th { background: var(--panel); }
+  hr { border: none; border-top: 1px solid var(--border); }
+  .btn {
+    display: inline-block; padding: 6px 14px; border-radius: 3px;
+    background: var(--accent); color: var(--accent-fg); text-decoration: none;
+  }
+  .markdown-alert {
+    margin: 1em 0; padding: 8px 14px; border-left: 4px solid var(--alert);
+    border-radius: 0 6px 6px 0;
+    background: color-mix(in srgb, var(--alert) 8%, transparent);
+  }
+  .markdown-alert p { margin: 0.25em 0; }
+  .markdown-alert-title { font-weight: 600; color: var(--alert); }
+  .markdown-alert-note { --alert: #3b82f6; }
+  .markdown-alert-tip { --alert: #22c55e; }
+  .markdown-alert-important { --alert: #a855f7; }
+  .markdown-alert-warning { --alert: #f59e0b; }
+  .markdown-alert-caution { --alert: #ef4444; }
+  /* The wiki's tabs need its scripts, so their panels stack, each under
+     its label. */
+  .content-tab-panel {
+    border: 1px solid var(--border); border-radius: 3px;
+    padding: 0 12px; margin: 0.75em 0;
+  }
+  .content-tab-panel::before {
+    content: attr(data-label); display: block; font-weight: 600;
+    margin: 8px 0 0; color: var(--muted); font-size: 0.875em;
+  }
+  .image {
+    display: inline-block; padding: 4px 10px; border: 1px dashed var(--border);
+    border-radius: 3px; color: var(--muted); font-size: 0.875em;
+  }
+  </style></template>
+  <div class="frame">
+  <div id="waiting" class="status">Waiting for the proposed change…</div>
+  <main id="review" hidden>
+    <header>
+      <img src="{{ icons/favicon.svg }}" alt="CourtListener">
+      <h1 id="heading"></h1>
+    </header>
+    <div class="meta" id="details"></div>
+    <div class="data-source" id="data-source" hidden></div>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" data-tab="diff" aria-selected="true">Diff</button>
+      <button class="tab" role="tab" data-tab="new-preview" aria-selected="false">New preview</button>
+      <button class="tab" role="tab" data-tab="new-source" aria-selected="false">New source</button>
+      <button class="tab" role="tab" data-tab="old-preview" aria-selected="false">Old preview</button>
+      <button class="tab" role="tab" data-tab="old-source" aria-selected="false">Old source</button>
+    </div>
+    <pre class="panel" id="diff"></pre>
+    <div class="panel preview" id="new-preview" hidden></div>
+    <pre class="panel" id="new-source" hidden></pre>
+    <div class="panel preview" id="old-preview" hidden></div>
+    <pre class="panel" id="old-source" hidden></pre>
+    <div class="actions">
+      <span class="status" id="status"></span>
+      <button class="action" id="discard">Discard</button>
+      <button class="action primary" id="save">Save edit</button>
+    </div>
+  </main>
+  </div>
+
+  <script type="module">{{ js/ext-apps-2.1.0.js }}</script>
+  <script type="module">
+    const PROPOSAL_KEY = "courtlistener/wikiEditProposal";
+    // Ends a failed save's error when the change is kept for another try;
+    // RETRY_HINT in wiki_edit_page_tool.py.
+    const RETRY_HINT = "you can try saving again.";
+    const $ = (id) => document.getElementById(id);
+    const app = new globalThis.App({ name: "CourtListener wiki edit", version: "0.1.0" });
+    let proposal = null;
+    let finished = false;
+
+    function line(text, cls) {
+      const span = document.createElement("span");
+      span.textContent = text || " ";
+      if (cls) span.className = cls;
+      return span;
+    }
+
+    function renderDiff(diff) {
+      const pre = $("diff");
+      pre.replaceChildren();
+      // The first two lines name the files; after them, a line starting
+      // "---" is a deleted line, such as a Markdown rule.
+      diff.split("\n").forEach((text, n) => {
+        let cls = "";
+        if (n < 2 && (text.startsWith("+++") || text.startsWith("---"))) cls = "file";
+        else if (text.startsWith("@@")) cls = "hunk";
+        else if (text.startsWith("+")) cls = "add";
+        else if (text.startsWith("-")) cls = "del";
+        pre.append(line(text, cls));
+      });
+    }
+
+    function selectTab(name) {
+      for (const t of document.querySelectorAll(".tab")) {
+        t.setAttribute("aria-selected", String(t.dataset.tab === name));
+      }
+      for (const panel of $("review").querySelectorAll(":scope > .panel")) {
+        panel.hidden = panel.id !== name;
+      }
+    }
+
+    function show(p) {
+      proposal = p;
+      $("waiting").hidden = true;
+      $("review").hidden = false;
+      const creating = p.action === "create";
+      const link = document.createElement("a");
+      link.href = p.url; link.textContent = p.path; link.target = "_blank";
+      if (creating) {
+        // A new page has no old version or diff: just how it will look.
+        document.title = "Review new wiki page";
+        $("heading").textContent = `Create “${p.title}”`;
+        $("details").replaceChildren("in ", link, ` · “${p.change_message}”`);
+        $("save").textContent = "Create page";
+        for (const tab of ["diff", "old-preview", "old-source"]) {
+          document.querySelector(`.tab[data-tab="${tab}"]`).hidden = true;
+        }
+        selectTab("new-preview");
+      } else {
+        const renamed = p.new_title !== p.title;
+        $("heading").textContent = renamed
+          ? `Edit and rename “${p.title}” to “${p.new_title}”`
+          : `Edit “${p.title}”`;
+        $("details").replaceChildren(
+          link, ` · from revision ${p.base_revision} · “${p.change_message}”`
+        );
+        renderDiff(p.diff || "(The content is unchanged.)");
+      }
+      const changes = Object.entries(p.data_source || {});
+      $("data-source").hidden = !changes.length;
+      $("data-source").replaceChildren(...changes.map(([field, c]) => {
+        const row = document.createElement("div");
+        const label = field === "data_source_url" ? "Data source" : "Cache";
+        const show = (v) => field === "data_source_ttl"
+          ? `${v ?? 300} s` : (v || "none");
+        row.textContent = `${label}: ${show(c.old)} → ${show(c.new)}`;
+        return row;
+      }));
+      $("new-source").textContent = p.new_source;
+      $("old-source").textContent = p.old_source ?? "";
+      const origin = new URL(p.url).origin;
+      renderPreview($("new-preview"), p.new_preview, origin);
+      renderPreview($("old-preview"), p.old_preview, origin);
+      // Once the proposal expires, Save can't work, as when the view is
+      // reopened later from the conversation.
+      if (p.expires_at) {
+        const left = p.expires_at * 1000 - Date.now();
+        if (left <= 0) expire();
+        else setTimeout(expire, left);
+      }
+    }
+
+    function expire() {
+      if (finished) return;
+      finish();
+      setStatus("This proposal has expired. Ask for it to be proposed again.");
+    }
+
+    // The wiki's rendered HTML, with its relative links pointed at the
+    // wiki. Images become labeled links: the view can't load them, since
+    // private uploads need a wiki sign-in. The wiki sanitizes the HTML;
+    // as a second layer, it's parsed in an inert template, which runs and
+    // loads nothing, and anything that could run is dropped before it's
+    // shown.
+    function renderPreview(host, html, origin) {
+      const root = host.shadowRoot || host.attachShadow({ mode: "open" });
+      const el = document.createElement("div");
+      el.className = "content";
+      root.replaceChildren($("preview-style").content.cloneNode(true), el);
+      if (html == null) {
+        el.innerHTML = '<p class="unavailable">The wiki couldn\'t render a preview.</p>';
+        return;
+      }
+      const template = document.createElement("template");
+      template.innerHTML = html;
+      const page = template.content;
+      for (const node of page.querySelectorAll(
+        "script, iframe, object, embed, link, meta, base, style, form"
+      )) node.remove();
+      for (const node of page.querySelectorAll("*")) {
+        for (const { name, value } of [...node.attributes]) {
+          const scripted = /^\s*(javascript|data|vbscript):/i.test(value);
+          if (name.startsWith("on") || (["href", "src", "xlink:href"].includes(name) && scripted)) {
+            node.removeAttribute(name);
+          }
+        }
+      }
+      for (const a of page.querySelectorAll("a[href]")) {
+        const href = a.getAttribute("href");
+        if (href.startsWith("#")) continue;
+        a.href = new URL(href, origin).href;
+      }
+      for (const img of page.querySelectorAll("img")) {
+        const link = document.createElement("a");
+        link.className = "image";
+        link.href = new URL(img.getAttribute("src") || "", origin).href;
+        link.textContent = `Image: ${img.alt || "untitled"}`;
+        img.replaceWith(link);
+      }
+      el.append(page);
+    }
+
+    // A click in a preview reaches here from its shadow root, so the link
+    // is found along the event's path.
+    document.addEventListener("click", (event) => {
+      const a = event.composedPath().find(
+        (node) => node instanceof HTMLAnchorElement && node.hasAttribute("href")
+      );
+      if (!a) return;
+      const href = a.getAttribute("href");
+      if (href.startsWith("#")) {
+        // Fragment links don't reach into a shadow root, so a preview's
+        // own anchors (a table of contents, say) are scrolled to here.
+        const root = a.getRootNode();
+        if (root instanceof ShadowRoot) {
+          event.preventDefault();
+          let id = href.slice(1);
+          try { id = decodeURIComponent(id); } catch (e) {}
+          root.getElementById(id)?.scrollIntoView({ block: "start" });
+        }
+        return;
+      }
+      event.preventDefault();
+      app.openLink({ url: a.href }).catch(() => window.open(a.href, "_blank"));
+    });
+
+    // How the messages to the model name the change.
+    function what() {
+      return proposal.action === "create"
+        ? `the proposed new page “${proposal.title}” in ${proposal.path}`
+        : `the proposed edit to ${proposal.path}`;
+    }
+
+    function setStatus(text, cls = "") {
+      $("status").textContent = text;
+      $("status").className = `status ${cls}`;
+    }
+
+    function finish() {
+      finished = true;
+      $("save").disabled = true;
+      $("discard").disabled = true;
+    }
+
+    async function tellModel(text) {
+      try {
+        await app.updateModelContext({ content: [{ type: "text", text }] });
+      } catch (e) {
+        // Not every host supports this; the user can tell the model.
+      }
+    }
+
+    for (const tab of document.querySelectorAll(".tab")) {
+      tab.addEventListener("click", () => selectTab(tab.dataset.tab));
+    }
+
+    $("save").addEventListener("click", async () => {
+      if (!proposal || finished) return;
+      $("save").disabled = true;
+      setStatus("Saving…");
+      try {
+        const result = await app.callServerTool({
+          name: "wiki_confirm_edit",
+          arguments: { token: proposal.token },
+        });
+        const text = (result.content || []).map((c) => c.text || "").join("\n");
+        let page = null;
+        if (!result.isError) {
+          try { page = JSON.parse(text); } catch (e) {}
+        }
+        if (!page || !(page.revision || page.path)) {
+          setStatus(text || "The wiki refused the change.", "error");
+          if (text.endsWith(RETRY_HINT)) {
+            $("save").disabled = false;
+            return;
+          }
+          finish();
+          await tellModel(`The user tried to save ${what()}, but it failed: ${text}`);
+          return;
+        }
+        finish();
+        setStatus(proposal.action === "create"
+          ? `Created at ${page.path ?? "?"}.`
+          : `Saved as revision ${page.revision ?? "?"}.`, "ok");
+        await tellModel(`The user saved ${what()}; it is now revision ${page.revision ?? "?"} at path ${page.path ?? proposal.path}.`);
+      } catch (e) {
+        $("save").disabled = false;
+        setStatus(`Couldn't reach the server: ${e.message || e}`, "error");
+      }
+    });
+
+    $("discard").addEventListener("click", async () => {
+      if (!proposal || finished) return;
+      finish();
+      setStatus("Discarded. Nothing was saved.");
+      await tellModel(`The user discarded ${what()}; nothing was saved.`);
+    });
+
+    app.ontoolresult = (result) => {
+      const p = result && result._meta && result._meta[PROPOSAL_KEY];
+      if (p) {
+        show(p);
+        return;
+      }
+      // An error, or a message such as "reconnect to use the wiki".
+      const text = ((result && result.content) || [])
+        .map((c) => c.text || "").join("\n");
+      $("waiting").textContent = text || "The change couldn't be proposed.";
+    };
+    app.onhostcontextchanged = (ctx) => {
+      if (ctx && ctx.theme) document.documentElement.dataset.theme = ctx.theme;
+    };
+
+    await app.connect();
+    const ctx = app.getHostContext();
+    if (ctx && ctx.theme) document.documentElement.dataset.theme = ctx.theme;
+  </script>
+</body>
+</html>

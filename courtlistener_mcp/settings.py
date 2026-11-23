@@ -79,7 +79,7 @@ OAUTH_SCOPES = os.getenv(
     "COURTLISTENER_OAUTH_SCOPES", "openid api wiki email profile"
 ).split()
 
-# The Free Law Project wiki the wiki tools read.
+# The Free Law Project wiki the wiki tools read and edit.
 WIKI_BASE_URL = os.getenv("WIKI_BASE_URL", "https://wiki.free.law").rstrip("/")
 
 # The scopes a sign-in needs before the wiki tools will call the wiki.

@@ -110,3 +110,33 @@ async def test_unreachable_wiki_is_a_connection_error(monkeypatch):
     with pytest.raises(WikiAPIError, match="could not be reached") as excinfo:
         await wiki_get("pages/")
     assert excinfo.value.status == "connection"
+
+
+@pytest.mark.parametrize(
+    "body, message, code",
+    [
+        (
+            {"error": "locked", "detail": "Close the editor and try again."},
+            "(HTTP 409): Close the editor and try again.",
+            "locked",
+        ),
+        (
+            {"title": ["Too long."]},
+            '(HTTP 409): {"title": ["Too long."]}',
+            None,
+        ),
+    ],
+)
+async def test_a_refused_write_carries_the_wikis_explanation(
+    monkeypatch, body, message, code
+):
+    serve(
+        monkeypatch,
+        lambda request: httpx.Response(409, json=body),
+        access_token(TokenKind.OAUTH),
+    )
+    with pytest.raises(WikiAPIError) as exc:
+        await wiki.wiki_write("PATCH", "pages/eng", {"content": "x"})
+    assert str(exc.value).endswith(message)
+    assert exc.value.status == "409"
+    assert exc.value.code == code

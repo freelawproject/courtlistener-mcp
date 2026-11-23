@@ -73,6 +73,9 @@ def test_the_middleware_guards_every_wiki_tool():
         "wiki_list_pages",
         "wiki_search",
         "wiki_read_page",
+        "wiki_create_page",
+        "wiki_edit_page",
+        "wiki_confirm_edit",
     } == WIKI_TOOL_NAMES
     assert set(MCP_TOOLS) >= WIKI_TOOL_NAMES
 

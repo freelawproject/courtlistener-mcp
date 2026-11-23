@@ -33,6 +33,9 @@ from courtlistener_mcp.tokens import TokenInfo, TokenKind
 
 logger = logging.getLogger(__name__)
 
+# How long a proposed wiki edit waits for the user to confirm it.
+WIKI_EDIT_TTL_SECONDS = 30 * 60
+
 
 def json_default(obj):
     if isinstance(obj, (date, datetime)):
@@ -101,6 +104,11 @@ class Session:
     async def _delete(self, key: str) -> None:
         raise NotImplementedError("_delete must be implemented by subclass")
 
+    async def _pop(self, key: str) -> str | None:
+        """Get and delete *key* in one step, so two callers can't both
+        get it."""
+        raise NotImplementedError("_pop must be implemented by subclass")
+
     async def _get_user_scoped(self, suffix: str) -> Any:
         raw = await self._get(f"mcp:{user_key()}:{suffix}")
         if raw is None:
@@ -140,6 +148,25 @@ class Session:
             text,
             DOCUMENT_TTL_SECONDS,
         )
+
+    async def store_wiki_edit(
+        self,
+        token: str,
+        data: dict,
+        ttl_seconds: int = WIKI_EDIT_TTL_SECONDS,
+    ) -> None:
+        """Keep a proposed wiki edit until the user confirms it."""
+        await self._set(
+            f"mcp:{user_key()}:wiki-edit:{token}",
+            json.dumps(data, default=json_default),
+            ttl_seconds,
+        )
+
+    async def pop_wiki_edit(self, token: str) -> dict | None:
+        """The current user's proposed wiki edit *token*, removed so it can
+        be applied only once; None if it expired or was already used."""
+        raw = await self._pop(f"mcp:{user_key()}:wiki-edit:{token}")
+        return None if raw is None else json.loads(raw)
 
     async def get_token_info(
         self, token: str, kind: TokenKind
@@ -230,6 +257,16 @@ class RedisSession(Session):
         with degrade_on_connection_error("delete"):
             await self.client.delete(key)
 
+    async def _pop(self, key: str) -> str | None:
+        # GET and DEL in one transaction (GETDEL needs Redis 6.2).
+        with degrade_on_connection_error("pop"):
+            async with self.client.pipeline(transaction=True) as pipe:
+                pipe.get(key)
+                pipe.delete(key)
+                value, _ = await pipe.execute()
+            return value
+        return None
+
     async def mark_active(
         self, user_hash: str, credential: str, day: date
     ) -> bool:
@@ -278,6 +315,11 @@ class InMemorySession(Session):
 
     async def _delete(self, key: str) -> None:
         self._data.pop(key, None)
+
+    async def _pop(self, key: str) -> str | None:
+        value = await self._get(key)
+        self._data.pop(key, None)
+        return value
 
     async def mark_active(
         self, user_hash: str, credential: str, day: date

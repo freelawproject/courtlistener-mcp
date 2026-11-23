@@ -35,6 +35,9 @@ from courtlistener_mcp.tools.unsubscribe_from_docket_alert import (
     UnsubscribeFromDocketAlertTool,
 )
 from courtlistener_mcp.tools.update_tag import UpdateTagTool
+from courtlistener_mcp.tools.wiki_confirm_edit import WikiConfirmEditTool
+from courtlistener_mcp.tools.wiki_create_page import WikiCreatePageTool
+from courtlistener_mcp.tools.wiki_edit_page import WikiEditPageTool
 from courtlistener_mcp.tools.wiki_list_pages import WikiListPagesTool
 from courtlistener_mcp.tools.wiki_read_page import WikiReadPageTool
 from courtlistener_mcp.tools.wiki_search import WikiSearchTool
@@ -70,5 +73,8 @@ MCP_TOOLS: dict[str, MCPTool] = {
         WikiListPagesTool(),
         WikiSearchTool(),
         WikiReadPageTool(),
+        WikiEditPageTool(),
+        WikiConfirmEditTool(),
+        WikiCreatePageTool(),
     ]
 }

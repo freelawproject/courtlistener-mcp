@@ -31,8 +31,10 @@ courtlistener_mcp/
     documents.py     document text: fetching, chunking, snippet search
     citation_*.py    citation analysis, jobs, matching and rendering
     tags.py          tag schemas and error messages
+    views.py         the MCP App views: pages that hosts show beside a tool result
     web.py           the web files under assets/, rendered for pages and app views
     wiki.py          the wiki API client, and the wiki tools' shared pieces
+    wiki_edits.py    proposed wiki changes: edits, previews, the review proposal
   tools/             the MCP tools, one module per tool
     __init__.py      the registry (MCP_TOOLS)
     base.py          MCPTool and WikiTool

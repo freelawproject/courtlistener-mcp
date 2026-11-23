@@ -2,8 +2,11 @@
 
 import httpx
 import pytest
+from fastmcp import Client
+from fastmcp.apps import UI_MIME_TYPE
 
 from courtlistener_mcp.lib import web
+from courtlistener_mcp.lib.views import MCP_VIEWS
 from courtlistener_mcp.server.main import ICONS, create_mcp_server
 
 
@@ -105,3 +108,13 @@ class TestRoutes:
         assert response.status_code == 200
         assert response.content == web.asset_path(f"icons/{name}").read_bytes()
         assert response.headers["cache-control"] == "public, max-age=86400"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("view", MCP_VIEWS, ids=lambda v: v.name)
+async def test_each_view_is_served_rendered(view):
+    async with Client(create_mcp_server()) as client:
+        [content] = await client.read_resource(view.uri)
+    assert content.mime_type == UI_MIME_TYPE
+    assert content.text == view.html()
+    assert "export{" not in content.text.replace(" ", "")

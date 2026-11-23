@@ -1,0 +1,38 @@
+{
+  "type": "object",
+  "properties": {
+    "directory": {
+      "type": "string",
+      "description": "The directory's path, e.g. `engineering`."
+    },
+    "title": {
+      "type": "string",
+      "description": "The page title."
+    },
+    "content": {
+      "type": "string",
+      "description": "The page's Markdown source."
+    },
+    "change_message": {
+      "type": "string",
+      "description": "A short description of the change."
+    },
+    "data_source_url": {
+      "type": "string",
+      "description": "The page's data source: a URL returning JSON whose values fill its `[[ key ]]` placeholders (`[[ stats.open ]]` for nested keys). Only domains the wiki allows work. `\"\"` removes it."
+    },
+    "data_source_ttl": {
+      "type": "integer",
+      "minimum": 10,
+      "maximum": 86400,
+      "description": "Seconds to cache the data source's response, from 10 to 86400 (a day); 300 by default."
+    }
+  },
+  "required": [
+    "directory",
+    "title",
+    "content",
+    "change_message"
+  ],
+  "additionalProperties": false
+}

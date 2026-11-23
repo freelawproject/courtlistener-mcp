@@ -182,10 +182,14 @@ For endpoints that don't have a dedicated tool — financial disclosures, opinio
 | `wiki_list_pages` | List the pages of the [Free Law Project wiki](https://wiki.free.law) you can read, with their paths, descriptions and links, 50 to a page. |
 | `wiki_search` | Full-text search of those pages, 20 results to a page, each with a snippet and a link. Supports quoted phrases, `-word`, `title:word`, and `in:<directory>`. |
 | `wiki_read_page` | Read one page as Markdown, by its path or its link, with data placeholders filled in and wiki links resolved. `raw` returns the page's source instead. |
+| `wiki_edit_page` | Propose an edit to a page you can edit: replacements in its source, or the whole new source, plus an optional new title or data source. Saves nothing: the change is shown to you for review. |
+| `wiki_create_page` | Propose a new page in a directory you can edit. Saves nothing: the page is shown to you for review. |
 
 The two listing tools take a `page` argument and report the `total` and the `next_page`.
 
 Everyone can read the wiki's public pages. Signed in with OAuth, you also see the pages your CourtListener account's email can see on the wiki (FLP staff content for `@free.law` addresses, plus anything shared with you). That needs the `wiki`, `profile` and `email` scopes; a sign-in without them gets a message asking you to reconnect the connector instead of results. API-token sessions read as the public. A few legacy clients that can't request those scopes don't see the wiki tools at all.
+
+Edits and new pages are shown in a review view, an [MCP App](https://modelcontextprotocol.io/docs/extensions/apps), with the diff, the page rendered by the wiki and its source, before and after. Only you can save the change, with the view's Save button; the model can't. Saving needs an OAuth sign-in, since API-token sessions can only read the wiki. Clients that can't show MCP Apps get the proposal's summary and a link to make the change in the wiki instead.
 
 ### Alerts and subscriptions
 
