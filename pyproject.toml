@@ -128,3 +128,4 @@ lint.ignore = [
   # printf-string-formatting
   "UP031",
 ]
+lint.flake8-tidy-imports.ban-relative-imports = "all"

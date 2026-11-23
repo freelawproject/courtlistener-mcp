@@ -60,6 +60,12 @@ def imported_modules(module: str) -> set[str]:
     path = path / "__init__.py" if path.is_dir() else path.with_suffix(".py")
     found = set()
     for node in ast.walk(ast.parse(path.read_text())):
+        # Relative imports are banned (ruff TID252), so only absolute
+        # imports need checking. Fail loudly rather than skip one.
+        assert not (isinstance(node, ast.ImportFrom) and node.level), (
+            f"{PACKAGE}.{module} has a relative import on line "
+            f"{node.lineno}; use an absolute import."
+        )
         if isinstance(node, ast.ImportFrom) and node.module:
             if node.module == PACKAGE:
                 # `from courtlistener_mcp import settings`

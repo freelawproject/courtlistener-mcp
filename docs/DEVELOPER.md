@@ -56,7 +56,7 @@ courtlistener_mcp/
    - `tools/` and `auth/` import `lib/` and below, never each other.
    - `server/` wires everything together, and nothing imports from it.
 
-   `tests/test_import_layers.py` enforces this. A new top-level module has to be added to a layer there.
+   `tests/test_import_layers.py` enforces this. A new top-level module has to be added to a layer there. Imports within the package are always absolute (`from courtlistener_mcp.lib import wiki`); ruff rejects relative imports.
 5. **Every module starts with a docstring** saying what it holds. If you can't say it in a line or two, the module is doing too much. Tool modules are the exception: a tool module is one class, and that class's docstring is the tool's description. `tests/test_module_docstrings.py` checks this.
 
 ## Adding a Tool
