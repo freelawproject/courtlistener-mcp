@@ -54,6 +54,32 @@ class TestRender:
             web.render("html/page.html")
 
 
+@pytest.mark.parametrize(
+    "script, expected",
+    [
+        (
+            "const a=1;class B{}export{a as App,B};",
+            "const a=1;class B{}Object.assign(globalThis, {App: a, B: B});\n",
+        ),
+        ("export { a as A };\n", "Object.assign(globalThis, {A: a});\n"),
+        ("window.x = 1;", "window.x = 1;"),
+    ],
+)
+def test_a_scripts_exports_become_globals(script, expected):
+    assert web.exports_to_globals(script) == expected
+
+
+def test_an_inlined_script_has_no_exports(assets):
+    (assets / "js").mkdir()
+    (assets / "js" / "sdk.js").write_text("let a=1;export{a as App};")
+    (assets / "html" / "page.html").write_text(
+        "<script>{{ js/sdk.js }}</script>"
+    )
+    assert web.render("html/page.html") == (
+        "<script>let a=1;Object.assign(globalThis, {App: a});\n</script>"
+    )
+
+
 def test_every_page_renders():
     for page in sorted((web.ASSETS_DIR / "html").glob("*.html")):
         assert "{{" not in web.render(f"html/{page.name}"), page.name
