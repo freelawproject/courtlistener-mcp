@@ -1,3 +1,5 @@
+"""Prometheus metrics: tool calls, auth outcomes and active users."""
+
 import os
 from collections.abc import Iterable, Mapping
 from datetime import date
@@ -17,7 +19,6 @@ from prometheus_client.core import GaugeMetricFamily, Metric
 from prometheus_client.registry import Collector
 from pydantic import ValidationError
 
-from courtlistener_mcp.auth_types import TokenKind
 from courtlistener_mcp.exceptions import (
     SessionDataNotFoundError,
     ToolArgumentValidationError,
@@ -31,6 +32,7 @@ from courtlistener_mcp.session import (
     token_user_key,
     utc_today,
 )
+from courtlistener_mcp.tokens import TokenKind
 
 tool_calls_total = Counter(
     "mcp_tool_calls_total",

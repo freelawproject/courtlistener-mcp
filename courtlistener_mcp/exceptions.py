@@ -1,3 +1,6 @@
+"""The errors tools raise, and the Sentry filter that decides which
+ones to report."""
+
 import logging
 
 from fastmcp.exceptions import ToolError

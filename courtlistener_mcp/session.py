@@ -1,3 +1,6 @@
+"""Per-user session state in Redis or memory: stored queries, citation
+jobs, cached token checks and the shared document cache."""
+
 from __future__ import annotations
 
 import hashlib
@@ -5,6 +8,7 @@ import hmac
 import json
 import logging
 import time
+import uuid
 from collections.abc import Awaitable, Iterator
 from contextlib import contextmanager
 from datetime import date, datetime, timedelta, timezone
@@ -16,7 +20,6 @@ from fastmcp.server.auth.auth import AccessToken
 from fastmcp.server.dependencies import get_access_token
 
 from courtlistener_mcp import settings
-from courtlistener_mcp.auth_types import TokenInfo, TokenKind
 from courtlistener_mcp.settings import (
     ACTIVE_USERS_TTL_SECONDS,
     DOCUMENT_TTL_SECONDS,
@@ -26,6 +29,7 @@ from courtlistener_mcp.settings import (
     SESSION_TTL_SECONDS,
     TOKEN_CACHE_TTL_SECONDS,
 )
+from courtlistener_mcp.tokens import TokenInfo, TokenKind
 
 logger = logging.getLogger(__name__)
 
@@ -314,3 +318,8 @@ def set_session(session: Session | None) -> None:
     """Replace the process-wide session store (for tests)."""
     global _session
     _session = session
+
+
+def make_id() -> str:
+    """Generate a short, random UUID for session-scoped tool state."""
+    return str(uuid.uuid4())[:8]

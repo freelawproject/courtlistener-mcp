@@ -7,7 +7,7 @@ import pytest
 
 from courtlistener_mcp.session import InMemorySession, set_session
 from courtlistener_mcp.tools import MCP_TOOLS
-from courtlistener_mcp.tools.read_document_tool import ReadDocumentTool
+from courtlistener_mcp.tools.read_document import ReadDocumentTool
 
 TEXT = "a" * 250  # 3 chunks of 100
 

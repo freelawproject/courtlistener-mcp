@@ -29,13 +29,9 @@ from courtlistener_mcp.metrics import (
     render_metrics,
     tool_calls_total,
 )
-from courtlistener_mcp.server import create_mcp_server
-from courtlistener_mcp.session import (
-    InMemorySession,
-    set_session,
-    utc_today,
-)
-from courtlistener_mcp.tools.mcp_tool import MCPTool
+from courtlistener_mcp.server.main import create_mcp_server
+from courtlistener_mcp.session import InMemorySession, set_session, utc_today
+from courtlistener_mcp.tools.base import MCPTool
 
 
 def _api_error(status_code: int) -> CourtListenerAPIError:

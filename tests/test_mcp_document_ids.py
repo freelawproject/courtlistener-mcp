@@ -16,29 +16,21 @@ import pytest
 from fastmcp.exceptions import ToolError
 
 from courtlistener_mcp.exceptions import ToolArgumentValidationError
-from courtlistener_mcp.session import (
-    InMemorySession,
-    get_session,
-    set_session,
-)
-from courtlistener_mcp.tools import MCP_TOOLS
-from courtlistener_mcp.tools.analyze_citations_tool import (
-    AnalyzeCitationsTool,
-)
-from courtlistener_mcp.tools.get_more_results_tool import (
-    GetMoreResultsTool,
-)
-from courtlistener_mcp.tools.read_document_tool import ReadDocumentTool
-from courtlistener_mcp.tools.search_document_tool import SearchDocumentTool
-from courtlistener_mcp.tools.search_tool import SearchTool
-from courtlistener_mcp.tools.utils import (
+from courtlistener_mcp.lib.opinions import (
     CLUSTER_OPINION_FIELDS,
     add_opinion_ids,
     describe_opinion,
-    filter_results_by_fields,
     resolve_cluster_opinions,
     summarize_opinions,
 )
+from courtlistener_mcp.lib.results import filter_results_by_fields
+from courtlistener_mcp.session import InMemorySession, get_session, set_session
+from courtlistener_mcp.tools import MCP_TOOLS
+from courtlistener_mcp.tools.analyze_citations import AnalyzeCitationsTool
+from courtlistener_mcp.tools.get_more_results import GetMoreResultsTool
+from courtlistener_mcp.tools.read_document import ReadDocumentTool
+from courtlistener_mcp.tools.search import SearchTool
+from courtlistener_mcp.tools.search_document import SearchDocumentTool
 
 
 class FakeIterator:
@@ -275,7 +267,7 @@ class TestAddOpinionIds:
                 GetMoreResultsTool, "get_client", return_value=client
             ),
             patch(
-                "courtlistener_mcp.tools.get_more_results_tool."
+                "courtlistener_mcp.tools.get_more_results."
                 "AsyncResourceIterator"
             ) as iterator_cls,
         ):

@@ -64,7 +64,7 @@ dev = [
 ]
 
 [project.scripts]
-courtlistener-mcp = "courtlistener_mcp.server:main"
+courtlistener-mcp = "courtlistener_mcp.server.main:main"
 
 [tool.setuptools.packages.find]
 include = ["courtlistener_mcp*"]
@@ -128,3 +128,4 @@ lint.ignore = [
   # printf-string-formatting
   "UP031",
 ]
+lint.flake8-tidy-imports.ban-relative-imports = "all"

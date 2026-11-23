@@ -24,10 +24,10 @@ from fastmcp.exceptions import ToolError
 from jsonschema import Draft202012Validator
 
 from courtlistener_mcp.exceptions import ToolArgumentValidationError
+from courtlistener_mcp.lib.schema import endpoint_ids
 from courtlistener_mcp.tools import MCP_TOOLS
-from courtlistener_mcp.tools.mcp_tool import coerce_integral_floats
-from courtlistener_mcp.tools.read_document_tool import ReadDocumentTool
-from courtlistener_mcp.tools.utils import endpoint_ids
+from courtlistener_mcp.tools.base import coerce_integral_floats
+from courtlistener_mcp.tools.read_document import ReadDocumentTool
 
 ENDPOINT_ID_TOOLS = [
     "get_endpoint_schema",
@@ -275,18 +275,18 @@ class TestFieldsNormalization:
     """
 
     def test_normalize_comma_separated(self):
-        from courtlistener_mcp.tools.utils import normalize_fields
+        from courtlistener_mcp.lib.results import normalize_fields
 
         assert normalize_fields("id,case_name") == ["id", "case_name"]
 
     def test_normalize_space_and_mixed(self):
-        from courtlistener_mcp.tools.utils import normalize_fields
+        from courtlistener_mcp.lib.results import normalize_fields
 
         assert normalize_fields("id case_name") == ["id", "case_name"]
         assert normalize_fields("id, case_name,") == ["id", "case_name"]
 
     def test_lists_and_none_pass_through(self):
-        from courtlistener_mcp.tools.utils import normalize_fields
+        from courtlistener_mcp.lib.results import normalize_fields
 
         assert normalize_fields(["id"]) == ["id"]
         assert normalize_fields(None) is None
@@ -385,7 +385,7 @@ class TestJsonEncodedArguments:
         ],
     )
     def test_schema_allows_type(self, schema, expected):
-        from courtlistener_mcp.tools.mcp_tool import schema_allows_type
+        from courtlistener_mcp.tools.base import schema_allows_type
 
         assert schema_allows_type(schema, "number") is expected
 
@@ -493,8 +493,7 @@ class TestIntegralFloatArguments:
         with (
             patch.object(ReadDocumentTool, "get_client", return_value=client),
             patch(
-                "courtlistener_mcp.tools.read_document_tool."
-                "fetch_document_text",
+                "courtlistener_mcp.tools.read_document.fetch_document_text",
                 fake_fetch,
             ),
         ):

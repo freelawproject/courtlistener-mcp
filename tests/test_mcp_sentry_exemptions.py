@@ -25,7 +25,7 @@ from courtlistener_mcp.exceptions import (
     WikiToolError,
     before_send,
 )
-from courtlistener_mcp.tools.mcp_tool import MCPTool
+from courtlistener_mcp.tools.base import MCPTool
 
 
 def _api_error(status_code: int, detail) -> CourtListenerAPIError:
@@ -79,14 +79,14 @@ class TestRunErrorClassification:
             "cached": cached,
         }
         monkeypatch.setattr(
-            "courtlistener_mcp.tools.mcp_tool.get_access_token",
+            "courtlistener_mcp.tools.base.get_access_token",
             lambda: token,
         )
         session = MagicMock()
         session.invalidate_token = AsyncMock()
         session.mark_active = AsyncMock()
         monkeypatch.setattr(
-            "courtlistener_mcp.tools.mcp_tool.get_session", lambda: session
+            "courtlistener_mcp.tools.base.get_session", lambda: session
         )
         return session
 
@@ -169,9 +169,7 @@ class TestRunErrorClassification:
         lands in the tool-argument Sentry issue."""
         from courtlistener.exceptions import InvalidFieldsError
 
-        from courtlistener_mcp.exceptions import (
-            ToolArgumentValidationError,
-        )
+        from courtlistener_mcp.exceptions import ToolArgumentValidationError
 
         error = InvalidFieldsError("Invalid fields: ['case_nam'].")
         with pytest.raises(ToolArgumentValidationError) as excinfo:
@@ -320,9 +318,7 @@ class TestToolArgumentFingerprint:
     """
 
     def _error_for(self, tool, arguments):
-        from courtlistener_mcp.exceptions import (
-            ToolArgumentValidationError,
-        )
+        from courtlistener_mcp.exceptions import ToolArgumentValidationError
         from courtlistener_mcp.tools import MCP_TOOLS
 
         with pytest.raises(ToolArgumentValidationError) as exc_info:

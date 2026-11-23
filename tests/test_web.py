@@ -3,8 +3,8 @@
 import httpx
 import pytest
 
-from courtlistener_mcp import web
-from courtlistener_mcp.server import ICONS, create_mcp_server
+from courtlistener_mcp.lib import web
+from courtlistener_mcp.server.main import ICONS, create_mcp_server
 
 
 @pytest.fixture

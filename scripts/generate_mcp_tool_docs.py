@@ -14,6 +14,9 @@ from courtlistener_mcp.tools import MCP_TOOLS
 
 TOOLS_DOCS_DIR = DOCS_DIR / "mcp_tools"
 
+# Handwritten intro for docs/README.md; the tool table is appended.
+README_SOURCE = DOCS_DIR / ".src" / "README.md"
+
 ENCODING = tiktoken.get_encoding("cl100k_base")
 
 GENERATED_NOTICE = generated_notice("generate_mcp_tool_docs.py")
@@ -212,14 +215,15 @@ def render_markdown(name: str, tool_entry: dict, source: str) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def render_readme(tool_names: list[str]) -> str:
-    lines = [
-        GENERATED_NOTICE,
-        "",
-        "# MCP Tools",
-        "",
-    ]
-    lines.extend(f"- [`{name}`](./{name}.md)" for name in tool_names)
+def render_readme(tools: list[tuple[str, str, str]]) -> str:
+    """docs/README.md: the handwritten intro plus a generated tool table."""
+    lines = [GENERATED_NOTICE, "", README_SOURCE.read_text().strip(), ""]
+    lines.extend(["| Tool | Title | Source |", "|---|---|---|"])
+    for name, title, source in sorted(tools):
+        lines.append(
+            f"| [`{name}`](./mcp_tools/{name}.md) | {title} "
+            f"| [`{source}`](../{source}) |"
+        )
     return "\n".join(lines) + "\n"
 
 
@@ -242,6 +246,7 @@ def main() -> None:
     TOOLS_DOCS_DIR.mkdir(parents=True, exist_ok=True)
 
     expected_files = set()
+    readme_rows = []
     for name, mcp_tool in MCP_TOOLS.items():
         tool_entry = mcp_tool.to_mcp_tool().model_dump(
             by_alias=True, exclude_none=True, mode="json"
@@ -253,6 +258,9 @@ def main() -> None:
         json_path.write_text(dump_json(tool_entry["inputSchema"]))
         md_path.write_text(render_markdown(name, tool_entry, source))
         expected_files.update({json_path.name, md_path.name})
+        annotations = tool_entry.get("annotations") or {}
+        title = annotations.get("title") or tool_entry.get("title") or ""
+        readme_rows.append((name, title, source))
 
         extra_keys = nonstandard_keys(tool_entry["inputSchema"])
         if extra_keys:
@@ -261,9 +269,7 @@ def main() -> None:
                 "JSON Schema keys: " + ", ".join(sorted(extra_keys))
             )
 
-    readme_path = TOOLS_DOCS_DIR / "README.md"
-    readme_path.write_text(render_readme(list(MCP_TOOLS)))
-    expected_files.add(readme_path.name)
+    (DOCS_DIR / "README.md").write_text(render_readme(readme_rows))
 
     check_stale_files(expected_files)
     print(

@@ -4,7 +4,7 @@
 
 **Update Tag**
 
-- **Source:** `courtlistener_mcp/tools/update_tag_tool.py`
+- **Source:** `courtlistener_mcp/tools/update_tag.py`
 - **Estimated definition size:** ~356 tokens (description ~64, input schema ~213; cl100k_base)
 - **Parameters:** 5 (1 required)
 - **Raw input schema:** [`update_tag.inputs.json`](./update_tag.inputs.json)

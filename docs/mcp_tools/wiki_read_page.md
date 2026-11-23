@@ -4,7 +4,7 @@
 
 **Read Wiki Page**
 
-- **Source:** `courtlistener_mcp/tools/wiki_read_page_tool.py`
+- **Source:** `courtlistener_mcp/tools/wiki_read_page.py`
 - **Estimated definition size:** ~355 tokens (description ~143, input schema ~130; cl100k_base)
 - **Parameters:** 2 (1 required)
 - **Raw input schema:** [`wiki_read_page.inputs.json`](./wiki_read_page.inputs.json)
