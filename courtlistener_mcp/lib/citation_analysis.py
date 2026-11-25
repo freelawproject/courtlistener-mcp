@@ -4,11 +4,13 @@ resuming, and render the report."""
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from courtlistener import AsyncCourtListener
 from courtlistener.exceptions import CourtListenerAPIError
 from eyecite import get_citations, resolve_citations
+from eyecite.models import CitationBase
 
 from courtlistener_mcp.lib.citation_jobs import (
     CitationJob,
@@ -25,15 +27,38 @@ from courtlistener_mcp.session import get_session, make_id
 
 RESUME_TOOL = "resume_citation_analysis"
 
+MAX_TEXT_LENGTH = 1_000_000
 
-def extract_citations(text: str, resolve: bool = True) -> str:
+
+async def find_citations(
+    text: str, *, resolve: bool = True
+) -> tuple[list[CitationBase], dict[Any, list[CitationBase]]]:
+    """Run eyecite's extraction (and resolution) in a worker thread.
+
+    Both are CPU-bound and pure Python; on a long opinion they take long
+    enough that running them on the event loop stalls every other request
+    on the worker. In a thread the GIL still serializes the work, but the
+    loop gets switched back in every few milliseconds, so other requests
+    keep moving. Resolutions are empty when *resolve* is false or nothing
+    was found.
+    """
+
+    def work() -> tuple[list[CitationBase], dict[Any, list[CitationBase]]]:
+        cites = get_citations(text)
+        resolutions = resolve_citations(cites) if resolve and cites else {}
+        return cites, resolutions
+
+    return await asyncio.to_thread(work)
+
+
+async def extract_citations(text: str, resolve: bool = True) -> str:
     """List the citations in *text*, grouped by what they refer to when
     *resolve* is true. Runs locally, with no API calls."""
-    cites = get_citations(text)
+    cites, resolutions = await find_citations(text, resolve=resolve)
     if not cites:
         return "No citations found."
     if resolve:
-        return format_resolved_citations(cites, resolve_citations(cites))
+        return format_resolved_citations(cites, resolutions)
     lines = [f"Found {len(cites)} citation(s):\n"]
     for i, cite in enumerate(cites, 1):
         label = citation_type_label(cite)
@@ -72,11 +97,10 @@ async def verify_next_batch(
 async def analyze_text(text: str, client: AsyncCourtListener) -> str:
     """Analyze the citations in *text*: verify the first batch, store the
     job for ``resume_citation_analysis``, and render the report."""
-    cites = get_citations(text)
+    cites, resolutions = await find_citations(text)
     if not cites:
         return "No citations found."
 
-    resolutions = resolve_citations(cites)
     job = CitationJob.from_resolutions(resolutions)
     rate_limit_detail = await verify_next_batch(job, client)
 

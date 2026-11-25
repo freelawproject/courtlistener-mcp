@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from mcp.types import ToolAnnotations
 
-from courtlistener_mcp.lib.citation_analysis import analyze_text
+from courtlistener_mcp.lib.citation_analysis import (
+    MAX_TEXT_LENGTH,
+    analyze_text,
+)
 from courtlistener_mcp.lib.opinions import (
     describe_opinion,
 )
@@ -55,7 +58,7 @@ class AnalyzeCitationsTool(MCPTool):
                     "description": (
                         "Legal text to analyze. Citations will be "
                         "extracted locally and verified against "
-                        "CourtListener."
+                        f"CourtListener. Up to {MAX_TEXT_LENGTH:,} characters."
                     ),
                 },
                 "opinion_id": {
@@ -86,6 +89,7 @@ class AnalyzeCitationsTool(MCPTool):
         cluster_id = arguments.get("cluster_id")
 
         self.require_one_of(arguments, "text", "opinion_id", "cluster_id")
+        self.check_max_length(arguments, "text", MAX_TEXT_LENGTH)
 
         note = ""
         async with self.get_client() as client:
