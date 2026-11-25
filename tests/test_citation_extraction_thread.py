@@ -22,17 +22,28 @@ TEXT = (
 @pytest.mark.asyncio
 async def test_extraction_runs_off_the_event_loop():
     loop_thread = threading.get_ident()
-    seen: list[int] = []
-    real = citation_analysis.get_citations
+    seen: dict[str, int] = {}
+    real_get = citation_analysis.get_citations
+    real_resolve = citation_analysis.resolve_citations
 
-    def recording(text):
-        seen.append(threading.get_ident())
-        return real(text)
+    def recording_get(text):
+        seen["get"] = threading.get_ident()
+        return real_get(text)
 
-    with patch.object(citation_analysis, "get_citations", recording):
+    def recording_resolve(cites):
+        seen["resolve"] = threading.get_ident()
+        return real_resolve(cites)
+
+    with (
+        patch.object(citation_analysis, "get_citations", recording_get),
+        patch.object(
+            citation_analysis, "resolve_citations", recording_resolve
+        ),
+    ):
         cites, resolutions = await find_citations(TEXT)
 
-    assert seen and seen[0] != loop_thread
+    assert seen.keys() == {"get", "resolve"}
+    assert loop_thread not in seen.values()
     assert len(cites) == 3
     assert len(resolutions) == 2
 
