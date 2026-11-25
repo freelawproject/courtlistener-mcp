@@ -37,7 +37,9 @@ class SearchTool(MCPTool):
     def get_input_schema(self) -> dict:
         """Get the input schema for the search tool."""
         search_endpoint = ENDPOINTS["search"]
-        search_properties = search_endpoint.model_json_schema()["properties"]
+        search_properties: dict[str, dict[str, Any]] = (
+            search_endpoint.model_json_schema()["properties"]
+        )
 
         for endpoint_name, endpoint in ENDPOINTS.items():
             if endpoint_name.endswith("_search"):
@@ -51,7 +53,7 @@ class SearchTool(MCPTool):
                         + [search_type]
                     )
 
-        updated_properties = {
+        updated_properties: dict[str, Any] = {
             "fields": {
                 "anyOf": [
                     {"items": {"type": "string"}, "type": "array"},

@@ -172,7 +172,7 @@ def auto_resolve_identical_clusters(
 
 def citation_type_label(cite: CitationBase) -> str:
     """Human-readable label for a citation type."""
-    labels = {
+    labels: dict[type[CitationBase], str] = {
         FullCaseCitation: "full",
         ShortCaseCitation: "short",
         IdCitation: "id.",

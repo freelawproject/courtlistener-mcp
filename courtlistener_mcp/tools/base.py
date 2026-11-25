@@ -103,6 +103,7 @@ async def resolve_document_arguments(
 class MCPTool(Tool):
     """A FastMCP tool with a hand-written input schema and a CL client."""
 
+    # pyrefly: ignore[bad-override-mutable-attribute]
     annotations: ToolAnnotations
     parameters: dict[str, Any] = Field(default_factory=dict)
     argument_aliases: ClassVar[dict[str, str]] = {}
