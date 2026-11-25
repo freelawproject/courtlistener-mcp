@@ -11,7 +11,7 @@ import time
 import uuid
 from collections.abc import Awaitable, Iterator
 from contextlib import contextmanager
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from typing import Any, cast
 
 import redis.asyncio as redis
@@ -66,7 +66,7 @@ def active_users_keys(credential: str, days: int, today: date) -> list[str]:
 
 def utc_today() -> date:
     """The current UTC date, which activity is bucketed by."""
-    return datetime.now(timezone.utc).date()
+    return datetime.now(UTC).date()
 
 
 def token_user_key(access_token: AccessToken) -> str:

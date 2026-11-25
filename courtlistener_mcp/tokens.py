@@ -1,20 +1,15 @@
 """The kinds of credential the server accepts, and what it caches about
 a verified one."""
 
-from enum import Enum
-from typing import TypedDict
-
-from typing_extensions import NotRequired
+from enum import StrEnum
+from typing import NotRequired, TypedDict
 
 
-class TokenKind(str, Enum):
+class TokenKind(StrEnum):
     """A kind of credential the server knows how to verify."""
 
     OAUTH = "oauth"
     API = "api_token"
-
-    # Not cosmetic: used as token info cache key suffix.
-    __str__ = str.__str__
 
     @property
     def scheme(self) -> str:
