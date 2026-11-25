@@ -3,7 +3,7 @@
   "properties": {
     "text": {
       "type": "string",
-      "description": "Legal text to analyze. Citations will be extracted locally and verified against CourtListener."
+      "description": "Legal text to analyze. Citations will be extracted locally and verified against CourtListener. Up to 1,000,000 characters."
     },
     "opinion_id": {
       "type": "integer",

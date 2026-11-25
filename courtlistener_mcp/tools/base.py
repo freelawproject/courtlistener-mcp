@@ -135,6 +135,19 @@ class MCPTool(Tool):
                 argument_names=sorted(names),
             )
 
+    def check_max_length(
+        self, arguments: dict, name: str, max_length: int
+    ) -> None:
+        """Raise if the string argument *name* is longer than *max_length*."""
+        value = arguments.get(name)
+        if value is not None and len(value) > max_length:
+            raise ToolArgumentValidationError(
+                f"`{name}` is {len(value):,} characters long; the limit is "
+                f"{max_length:,}. Split it into smaller parts.",
+                tool_name=self.name,
+                argument_names=[name],
+            )
+
     def get_client(self) -> AsyncCourtListener:
         """Build a CourtListener client for the current request.
 

@@ -5,7 +5,7 @@
 **Analyze Citations**
 
 - **Source:** `courtlistener_mcp/tools/analyze_citations.py`
-- **Estimated definition size:** ~467 tokens (description ~225, input schema ~142; cl100k_base)
+- **Estimated definition size:** ~477 tokens (description ~225, input schema ~152; cl100k_base)
 - **Parameters:** 3 (0 required)
 - **Raw input schema:** [`analyze_citations.inputs.json`](./analyze_citations.inputs.json)
 
@@ -53,7 +53,7 @@ Input should include exactly one of opinion_id or cluster_id.
 
 string · optional
 
-Legal text to analyze. Citations will be extracted locally and verified against CourtListener.
+Legal text to analyze. Citations will be extracted locally and verified against CourtListener. Up to 1,000,000 characters.
 
 ### `opinion_id`
 

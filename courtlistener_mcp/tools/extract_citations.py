@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from mcp.types import ToolAnnotations
 
-from courtlistener_mcp.lib.citation_analysis import extract_citations
+from courtlistener_mcp.lib.citation_analysis import (
+    MAX_TEXT_LENGTH,
+    extract_citations,
+)
 from courtlistener_mcp.tools.base import MCPTool
 
 
@@ -32,7 +35,10 @@ class ExtractCitationsTool(MCPTool):
             "properties": {
                 "text": {
                     "type": "string",
-                    "description": "Legal text to extract citations from.",
+                    "description": (
+                        "Legal text to extract citations from, up to "
+                        f"{MAX_TEXT_LENGTH:,} characters."
+                    ),
                 },
                 "resolve": {
                     "type": "boolean",
@@ -48,6 +54,7 @@ class ExtractCitationsTool(MCPTool):
         }
 
     async def call(self, arguments: dict) -> str:
-        return extract_citations(
+        self.check_max_length(arguments, "text", MAX_TEXT_LENGTH)
+        return await extract_citations(
             arguments["text"], resolve=arguments.get("resolve", True)
         )
