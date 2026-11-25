@@ -125,7 +125,7 @@ def create_mcp_server(auth: AuthProvider | None = None) -> FastMCP:
                 config["oauth_store"] = await asyncio.wait_for(
                     oauth_store_ready(), 5
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 config["oauth_store"] = False
 
         return JSONResponse(

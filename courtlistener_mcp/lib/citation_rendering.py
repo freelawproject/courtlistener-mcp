@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from courtlistener.async_client.citation_lookup import parse_wait_until
@@ -41,9 +41,7 @@ def format_rate_limit_note(detail: Any, *, resumable_with: str) -> str:
     )
     if target is None:
         return base
-    seconds = max(
-        0, int((target - datetime.now(timezone.utc)).total_seconds())
-    )
+    seconds = max(0, int((target - datetime.now(UTC)).total_seconds()))
     return (
         f"Rate limited by the upstream API (retry in ~{seconds}s, "
         f"wait_until={target.isoformat()}). Call `{resumable_with}` "
