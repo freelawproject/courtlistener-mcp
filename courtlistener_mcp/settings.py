@@ -99,6 +99,20 @@ SENTRY_TRACES_SAMPLE_RATE = float(
     os.getenv("SENTRY_TRACES_SAMPLE_RATE") or 0.05
 )
 
+
+def sentry_release(git_sha: str) -> str | None:
+    """The Sentry release for a build: its commit, as `/health` reports it.
+
+    None when the build has no `GIT_SHA` (local runs, images built without
+    the build arg); `sentry_sdk.init` then falls back to its own guess
+    (`SENTRY_RELEASE`, then `git rev-parse HEAD`), which finds nothing in
+    the production image.
+    """
+    return git_sha if git_sha not in ("", "unknown") else None
+
+
+SENTRY_RELEASE = sentry_release(GIT_SHA)
+
 # How long a verified token's info is cached.
 TOKEN_CACHE_TTL_SECONDS = int(os.getenv("MCP_TOKEN_CACHE_TTL", "600"))
 
