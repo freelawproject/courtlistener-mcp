@@ -6,7 +6,7 @@
 uv sync --extra dev                                # install
 uv run pytest                                      # tests (uv run tox for the full run)
 uv run tox -- --run-integration                    # with integration tests (needs COURTLISTENER_API_TOKEN)
-uv run mypy                                        # type check
+uv run pyrefly check                               # type check
 uv run pre-commit run --all-files                  # lint and format (ruff)
 uv run python scripts/generate_mcp_tool_docs.py    # regenerate the docs
 ```

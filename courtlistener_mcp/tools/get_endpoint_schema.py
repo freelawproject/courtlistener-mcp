@@ -50,7 +50,7 @@ class GetEndpointSchemaTool(MCPTool):
                         filter = inline_refs(filter, defs)
                         updated_properties[filter_name] = prepare_filter(
                             filter,
-                            endpoint_id=endpoint_id,
+                            endpoint_id=endpoint.endpoint_id,
                             field_name=filter_name,
                         )
                 schema = {

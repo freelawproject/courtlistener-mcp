@@ -51,7 +51,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "mypy>=1.10.0",
+    "pyrefly>=1.4.0",
     "types-jsonschema>=4.0.0",
     "pre-commit>=4.5.1",
     "pytest>=8.0.0",
@@ -76,19 +76,15 @@ include = ["courtlistener_mcp*"]
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
 
-[tool.mypy]
-files = ["courtlistener_mcp"]
-python_version = "3.10"
-check_untyped_defs = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_unused_configs = true
+[tool.pyrefly]
+project-includes = ["courtlistener_mcp"]
+python-version = "3.10"
+check-unannotated-defs = true
 
-# The API client doesn't ship a py.typed marker, so check against its
-# source anyway rather than treating it as untyped.
-[[tool.mypy.overrides]]
-module = ["courtlistener.*"]
-follow_untyped_imports = true
+# Flag ignore comments that no longer suppress anything.
+[tool.pyrefly.errors]
+unused-ignore = true
+unused-type-ignore = true
 
 [tool.ruff]
 line-length = 79

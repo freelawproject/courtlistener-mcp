@@ -2,7 +2,7 @@
 properties."""
 
 import json
-from typing import cast
+from typing import Any, cast
 
 from courtlistener.models import ENDPOINTS
 
@@ -110,7 +110,9 @@ def strip_schema_keys(node, keys):
     return node
 
 
-def prepare_filter(filter, endpoint_id: str = "", field_name: str = ""):
+def prepare_filter(
+    filter: dict[str, Any], endpoint_id: str = "", field_name: str = ""
+) -> dict[str, Any]:
     choices_str = prepare_choices_str(
         filter.get("choices"),
         endpoint_id=endpoint_id,
@@ -121,6 +123,7 @@ def prepare_filter(filter, endpoint_id: str = "", field_name: str = ""):
     ).strip()
     if "choices" in filter:
         del filter["choices"]
-    return strip_schema_keys(
-        filter, {"title", "related_class_name", "default"}
+    return cast(
+        "dict[str, Any]",
+        strip_schema_keys(filter, {"title", "related_class_name", "default"}),
     )
