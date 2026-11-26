@@ -21,6 +21,9 @@ READ_ONLY_TOOLS = {
     "wiki_list_pages",
     "wiki_search",
     "wiki_read_page",
+    # Propose a change for the user to review; they save nothing.
+    "wiki_edit_page",
+    "wiki_create_page",
 }
 
 WRITE_TOOLS = {
@@ -35,6 +38,7 @@ WRITE_TOOLS = {
     "delete_tag",
     "add_docket_to_tag",
     "remove_docket_from_tag",
+    "wiki_confirm_edit",
 }
 
 DESTRUCTIVE_TOOLS = {
@@ -44,6 +48,7 @@ DESTRUCTIVE_TOOLS = {
     "update_tag",
     "delete_tag",
     "remove_docket_from_tag",
+    "wiki_confirm_edit",
 }
 
 OPEN_WORLD_TOOLS = {
@@ -71,6 +76,9 @@ NON_IDEMPOTENT_TOOLS = {
     "get_more_results",
     "create_tag",
     "resume_citation_analysis",
+    "wiki_create_page",
+    "wiki_edit_page",
+    "wiki_confirm_edit",
 }
 
 EXPECTED_TITLES = {
@@ -101,6 +109,9 @@ EXPECTED_TITLES = {
     "wiki_list_pages": "List Wiki Pages",
     "wiki_search": "Search Wiki",
     "wiki_read_page": "Read Wiki Page",
+    "wiki_create_page": "Create Wiki Page",
+    "wiki_edit_page": "Edit Wiki Page",
+    "wiki_confirm_edit": "Save Reviewed Wiki Change",
 }
 
 

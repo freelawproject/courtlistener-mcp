@@ -5,6 +5,7 @@ import asyncio
 import contextlib
 
 from fastmcp import FastMCP
+from fastmcp.apps import UI_MIME_TYPE
 from fastmcp.server.auth import AuthProvider
 from mcp.types import Icon
 from starlette.middleware import Middleware
@@ -27,6 +28,7 @@ from courtlistener_mcp.auth.store import (
     oauth_store_ready,
     postgres_connect,
 )
+from courtlistener_mcp.lib.views import MCP_VIEWS
 from courtlistener_mcp.lib.web import asset_path, data_uri, render
 from courtlistener_mcp.metrics import render_metrics
 from courtlistener_mcp.server.middleware import WikiToolAccess
@@ -77,6 +79,15 @@ def create_mcp_server(auth: AuthProvider | None = None) -> FastMCP:
         # Tools validate their own arguments; see MCPTool.validate_arguments.
         strict_input_validation=False,
     )
+
+    for view in MCP_VIEWS:
+        mcp.resource(
+            view.uri,
+            name=view.name,
+            description=view.description,
+            mime_type=UI_MIME_TYPE,
+            app=view.app,
+        )(view.html)
 
     # The icons, at the root where browsers look for them.
     async def icon(request):

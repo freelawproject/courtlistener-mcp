@@ -5,7 +5,7 @@
 **Read Wiki Page**
 
 - **Source:** `courtlistener_mcp/tools/wiki_read_page.py`
-- **Estimated definition size:** ~355 tokens (description ~143, input schema ~130; cl100k_base)
+- **Estimated definition size:** ~413 tokens (description ~200, input schema ~130; cl100k_base)
 - **Parameters:** 2 (1 required)
 - **Raw input schema:** [`wiki_read_page.inputs.json`](./wiki_read_page.inputs.json)
 
@@ -18,8 +18,11 @@ e.g. `engineering/deploys`. The page's `url` works too, as do links
 found in page content, such as `/c/engineering/deploys/`. An
 `#anchor` on any of them is ignored. Returns the page's path, title,
 description, `updated_at`, `url` and its `content` as Markdown, with
-data placeholders filled in and wiki links resolved. Directories
-aren't pages: to see a directory's pages, search it with
+data placeholders filled in and wiki links resolved. It also gives
+the page's `revision` and whether you `can_edit` it; if you can, it
+gives the page's data source too (`data_source_url`, the JSON its
+`[[ key ]]` placeholders are filled from, and `data_source_ttl`).
+Directories aren't pages: to see a directory's pages, search it with
 `in:<directory path>`.
 
 ## Annotations

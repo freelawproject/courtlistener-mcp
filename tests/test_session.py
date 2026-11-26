@@ -16,6 +16,7 @@ from redis.exceptions import ConnectionError as RedisConnectionError
 from redis.exceptions import ResponseError
 from redis.exceptions import TimeoutError as RedisTimeoutError
 
+from courtlistener_mcp.exceptions import SessionUnavailableError
 from courtlistener_mcp.session import (
     InMemorySession,
     RedisSession,
@@ -305,6 +306,25 @@ class TestRedisSessionDegradation:
         run(session.store_query("abc", {"response": 1}))
         assert run(session.get_document("opinion", 42)) is None
         assert run(session.get_token_info("tok", "oauth")) is None
+
+    def test_wiki_edits_raise_instead_of_degrading(self, monkeypatch):
+        """A proposed wiki edit isn't a cache: losing it quietly would show
+        the user a change that can't be saved."""
+        monkeypatch.setenv("COURTLISTENER_API_TOKEN", "test-token")
+        session = self._failing_session(RedisConnectionError("dns"))
+        session._client.pipeline = MagicMock(
+            side_effect=RedisConnectionError("dns")
+        )
+        with pytest.raises(SessionUnavailableError):
+            run(session.store_wiki_edit("tok", {"path": "eng"}))
+        with pytest.raises(SessionUnavailableError):
+            run(session.pop_wiki_edit("tok"))
+
+    def test_wiki_edits_report_other_redis_errors_too(self, monkeypatch):
+        monkeypatch.setenv("COURTLISTENER_API_TOKEN", "test-token")
+        session = self._failing_session(ResponseError("READONLY replica"))
+        with pytest.raises(SessionUnavailableError):
+            run(session.store_wiki_edit("tok", {"path": "eng"}))
 
     def test_command_errors_still_raise(self):
         session = self._failing_session(

@@ -20,6 +20,7 @@ from fastmcp.server.auth.auth import AccessToken
 from fastmcp.server.dependencies import get_access_token
 
 from courtlistener_mcp import settings
+from courtlistener_mcp.exceptions import SessionUnavailableError
 from courtlistener_mcp.settings import (
     ACTIVE_USERS_TTL_SECONDS,
     DOCUMENT_TTL_SECONDS,
@@ -32,6 +33,9 @@ from courtlistener_mcp.settings import (
 from courtlistener_mcp.tokens import TokenInfo, TokenKind
 
 logger = logging.getLogger(__name__)
+
+# How long a proposed wiki edit waits for the user to confirm it.
+WIKI_EDIT_TTL_SECONDS = 30 * 60
 
 
 def json_default(obj):
@@ -95,11 +99,21 @@ class Session:
     async def _get(self, key: str) -> str | None:
         raise NotImplementedError("_get must be implemented by subclass")
 
-    async def _set(self, key: str, value: str, ttl_seconds: int) -> None:
+    async def _set(
+        self, key: str, value: str, ttl_seconds: int, *, degrade: bool = True
+    ) -> None:
+        """Store *key*. A store outage is a silent no-op, as for a cache,
+        unless *degrade* is false: then it raises
+        ``SessionUnavailableError``."""
         raise NotImplementedError("_set must be implemented by subclass")
 
     async def _delete(self, key: str) -> None:
         raise NotImplementedError("_delete must be implemented by subclass")
+
+    async def _pop(self, key: str, *, degrade: bool = True) -> str | None:
+        """Get and delete *key* in one step, so two callers can't both
+        get it. *degrade* is as for ``_set``."""
+        raise NotImplementedError("_pop must be implemented by subclass")
 
     async def _get_user_scoped(self, suffix: str) -> Any:
         raw = await self._get(f"mcp:{user_key()}:{suffix}")
@@ -140,6 +154,31 @@ class Session:
             text,
             DOCUMENT_TTL_SECONDS,
         )
+
+    async def store_wiki_edit(
+        self,
+        token: str,
+        data: dict,
+        ttl_seconds: int = WIKI_EDIT_TTL_SECONDS,
+    ) -> None:
+        """Keep a proposed wiki edit until the user confirms it. It can't
+        be lost quietly, so a store outage raises
+        ``SessionUnavailableError``."""
+        await self._set(
+            f"mcp:{user_key()}:wiki-edit:{token}",
+            json.dumps(data, default=json_default),
+            ttl_seconds,
+            degrade=False,
+        )
+
+    async def pop_wiki_edit(self, token: str) -> dict | None:
+        """The current user's proposed wiki edit *token*, removed so it can
+        be applied only once; None if it expired or was already used. A
+        store outage raises ``SessionUnavailableError``."""
+        raw = await self._pop(
+            f"mcp:{user_key()}:wiki-edit:{token}", degrade=False
+        )
+        return None if raw is None else json.loads(raw)
 
     async def get_token_info(
         self, token: str, kind: TokenKind
@@ -190,12 +229,24 @@ class Session:
 
 
 @contextmanager
-def degrade_on_connection_error(op: str) -> Iterator[None]:
-    """Treat redis connection errors and timeouts as cache misses."""
+def degrade_on_connection_error(
+    op: str, degrade: bool = True
+) -> Iterator[None]:
+    """Treat redis connection errors and timeouts as cache misses. Unless
+    *degrade*, raise them, and any other redis error, as
+    ``SessionUnavailableError``."""
     try:
         yield
     except (redis.ConnectionError, redis.TimeoutError) as exc:
+        if not degrade:
+            raise SessionUnavailableError(f"redis {op} failed: {exc}") from exc
         logger.error("redis %s failed; degrading to miss: %s", op, exc)
+    except redis.RedisError as exc:
+        # Other failures (READONLY in a failover, out of memory) are bugs
+        # for a cache, but state that can't degrade reports them the same.
+        if not degrade:
+            raise SessionUnavailableError(f"redis {op} failed: {exc}") from exc
+        raise
 
 
 class RedisSession(Session):
@@ -222,13 +273,25 @@ class RedisSession(Session):
             return await self.client.get(key)
         return None
 
-    async def _set(self, key: str, value: str, ttl_seconds: int) -> None:
-        with degrade_on_connection_error("set"):
+    async def _set(
+        self, key: str, value: str, ttl_seconds: int, *, degrade: bool = True
+    ) -> None:
+        with degrade_on_connection_error("set", degrade):
             await self.client.set(key, value, ex=ttl_seconds)
 
     async def _delete(self, key: str) -> None:
         with degrade_on_connection_error("delete"):
             await self.client.delete(key)
+
+    async def _pop(self, key: str, *, degrade: bool = True) -> str | None:
+        # GET and DEL in one transaction (GETDEL needs Redis 6.2).
+        with degrade_on_connection_error("pop", degrade):
+            async with self.client.pipeline(transaction=True) as pipe:
+                pipe.get(key)
+                pipe.delete(key)
+                value, _ = await pipe.execute()
+            return value
+        return None
 
     async def mark_active(
         self, user_hash: str, credential: str, day: date
@@ -273,11 +336,18 @@ class InMemorySession(Session):
             return None
         return value
 
-    async def _set(self, key: str, value: str, ttl_seconds: int) -> None:
+    async def _set(
+        self, key: str, value: str, ttl_seconds: int, *, degrade: bool = True
+    ) -> None:
         self._data[key] = (value, time.monotonic() + ttl_seconds)
 
     async def _delete(self, key: str) -> None:
         self._data.pop(key, None)
+
+    async def _pop(self, key: str, *, degrade: bool = True) -> str | None:
+        value = await self._get(key)
+        self._data.pop(key, None)
+        return value
 
     async def mark_active(
         self, user_hash: str, credential: str, day: date

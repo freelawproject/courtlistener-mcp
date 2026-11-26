@@ -10,6 +10,7 @@ repos:
     rev: v6.0.0
     hooks:
      - id: check-added-large-files
+       exclude: ^courtlistener_mcp/assets/js/ext-apps-[\d.]+\.js$
      - id: check-ast
      - id: check-json
      - id: check-merge-conflict

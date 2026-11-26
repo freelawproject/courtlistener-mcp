@@ -2,8 +2,11 @@
 
 import httpx
 import pytest
+from fastmcp import Client
+from fastmcp.apps import UI_MIME_TYPE
 
 from courtlistener_mcp.lib import web
+from courtlistener_mcp.lib.views import MCP_VIEWS
 from courtlistener_mcp.server.main import ICONS, create_mcp_server
 
 
@@ -54,6 +57,32 @@ class TestRender:
             web.render("html/page.html")
 
 
+@pytest.mark.parametrize(
+    "script, expected",
+    [
+        (
+            "const a=1;class B{}export{a as App,B};",
+            "const a=1;class B{}Object.assign(globalThis, {App: a, B: B});\n",
+        ),
+        ("export { a as A };\n", "Object.assign(globalThis, {A: a});\n"),
+        ("window.x = 1;", "window.x = 1;"),
+    ],
+)
+def test_a_scripts_exports_become_globals(script, expected):
+    assert web.exports_to_globals(script) == expected
+
+
+def test_an_inlined_script_has_no_exports(assets):
+    (assets / "js").mkdir()
+    (assets / "js" / "sdk.js").write_text("let a=1;export{a as App};")
+    (assets / "html" / "page.html").write_text(
+        "<script>{{ js/sdk.js }}</script>"
+    )
+    assert web.render("html/page.html") == (
+        "<script>let a=1;Object.assign(globalThis, {App: a});\n</script>"
+    )
+
+
 def test_every_page_renders():
     for page in sorted((web.ASSETS_DIR / "html").glob("*.html")):
         assert "{{" not in web.render(f"html/{page.name}"), page.name
@@ -79,3 +108,13 @@ class TestRoutes:
         assert response.status_code == 200
         assert response.content == web.asset_path(f"icons/{name}").read_bytes()
         assert response.headers["cache-control"] == "public, max-age=86400"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("view", MCP_VIEWS, ids=lambda v: v.name)
+async def test_each_view_is_served_rendered(view):
+    async with Client(create_mcp_server()) as client:
+        [content] = await client.read_resource(view.uri)
+    assert content.mime_type == UI_MIME_TYPE
+    assert content.text == view.html()
+    assert "export{" not in content.text.replace(" ", "")

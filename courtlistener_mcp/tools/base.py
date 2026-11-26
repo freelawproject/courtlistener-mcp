@@ -120,7 +120,7 @@ class MCPTool(Tool):
             "get_input_schema must be implemented by subclass"
         )
 
-    async def call(self, arguments: dict) -> dict | str:
+    async def call(self, arguments: dict) -> dict | str | ToolResult:
         """The tool body; ``run`` validates, translates errors, serializes."""
         raise NotImplementedError("call must be implemented by subclass")
 
@@ -316,6 +316,8 @@ class MCPTool(Tool):
                 status="connection",
             ) from exc
 
+        if isinstance(result, ToolResult):
+            return result
         if isinstance(result, dict):
             result = json.dumps(result, default=json_default, indent=2)
         if not isinstance(result, str):
@@ -374,10 +376,10 @@ class WikiTool(MCPTool):
     A sign-in without ``WIKI_SCOPES`` gets a message asking the user to
     reconnect, and the wiki is not called."""
 
-    async def call(self, arguments: dict) -> dict | str:
+    async def call(self, arguments: dict) -> dict | str | ToolResult:
         if missing_wiki_scopes():
             return MISSING_WIKI_SCOPES_MESSAGE
         return await self.call_wiki(arguments)
 
-    async def call_wiki(self, arguments: dict) -> dict:
+    async def call_wiki(self, arguments: dict) -> dict | ToolResult:
         raise NotImplementedError("call_wiki must be implemented by subclass")

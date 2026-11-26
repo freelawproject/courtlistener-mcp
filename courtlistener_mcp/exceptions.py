@@ -44,6 +44,11 @@ class SessionDataNotFoundError(ToolError):
         self.argument_name = argument_name
 
 
+class SessionUnavailableError(Exception):
+    """The session store couldn't be reached to keep or read state that
+    can't be treated as a cache miss, such as a proposed wiki change."""
+
+
 class UpstreamCourtListenerError(ToolError):
     """The upstream CL request failed: 5xx or transport error."""
 
@@ -56,19 +61,29 @@ class UpstreamCourtListenerError(ToolError):
 class WikiAPIError(Exception):
     """The wiki's API answered with an error, or could not be reached.
 
-    ``status`` is the HTTP status, or ``"connection"``.
+    ``status`` is the HTTP status, or ``"connection"``; ``code`` is the
+    wiki's own error code, such as ``"locked"``, when it gave one.
     """
 
-    def __init__(self, message: str, status: str) -> None:
+    def __init__(
+        self, message: str, status: str, code: str | None = None
+    ) -> None:
         super().__init__(message)
         self.status = status
+        self.code = code
 
 
 class WikiToolError(ToolError):
-    """A tool's wiki request failed; see ``WikiAPIError.status``."""
+    """A tool's wiki request failed; see ``WikiAPIError.status``. A 4xx is
+    the wiki refusing a request (no such page, a stale revision, no
+    permission), logged as a warning; anything else is an error, including
+    a 401, the wiki rejecting a sign-in this server accepted."""
 
     def __init__(self, message: str, tool_name: str, status: str) -> None:
-        super().__init__(message)
+        refused = status.startswith("4") and status != "401"
+        super().__init__(
+            message, log_level=logging.WARNING if refused else logging.ERROR
+        )
         self.tool_name = tool_name
         self.status = status
 

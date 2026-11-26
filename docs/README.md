@@ -29,6 +29,9 @@ See the [developer docs](./DEVELOPER.md) for working on the server. For tool-spe
 | [`subscribe_to_docket_alert`](./mcp_tools/subscribe_to_docket_alert.md) | Subscribe to Docket Alert | [`courtlistener_mcp/tools/subscribe_to_docket_alert.py`](../courtlistener_mcp/tools/subscribe_to_docket_alert.py) |
 | [`unsubscribe_from_docket_alert`](./mcp_tools/unsubscribe_from_docket_alert.md) | Unsubscribe from Docket Alert | [`courtlistener_mcp/tools/unsubscribe_from_docket_alert.py`](../courtlistener_mcp/tools/unsubscribe_from_docket_alert.py) |
 | [`update_tag`](./mcp_tools/update_tag.md) | Update Tag | [`courtlistener_mcp/tools/update_tag.py`](../courtlistener_mcp/tools/update_tag.py) |
+| [`wiki_confirm_edit`](./mcp_tools/wiki_confirm_edit.md) | Save Reviewed Wiki Change | [`courtlistener_mcp/tools/wiki_confirm_edit.py`](../courtlistener_mcp/tools/wiki_confirm_edit.py) |
+| [`wiki_create_page`](./mcp_tools/wiki_create_page.md) | Create Wiki Page | [`courtlistener_mcp/tools/wiki_create_page.py`](../courtlistener_mcp/tools/wiki_create_page.py) |
+| [`wiki_edit_page`](./mcp_tools/wiki_edit_page.md) | Edit Wiki Page | [`courtlistener_mcp/tools/wiki_edit_page.py`](../courtlistener_mcp/tools/wiki_edit_page.py) |
 | [`wiki_list_pages`](./mcp_tools/wiki_list_pages.md) | List Wiki Pages | [`courtlistener_mcp/tools/wiki_list_pages.py`](../courtlistener_mcp/tools/wiki_list_pages.py) |
 | [`wiki_read_page`](./mcp_tools/wiki_read_page.md) | Read Wiki Page | [`courtlistener_mcp/tools/wiki_read_page.py`](../courtlistener_mcp/tools/wiki_read_page.py) |
 | [`wiki_search`](./mcp_tools/wiki_search.md) | Search Wiki | [`courtlistener_mcp/tools/wiki_search.py`](../courtlistener_mcp/tools/wiki_search.py) |
