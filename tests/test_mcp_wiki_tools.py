@@ -199,6 +199,7 @@ async def test_read_page_rejects_what_is_not_a_page(
     with pytest.raises(ToolArgumentValidationError) as exc:
         await tool.call({"path": value})
     assert exc.value.argument_names == ["path"]
+    assert exc.value.error_kind == "invalid_path"
     wiki_get.assert_not_awaited()
 
 

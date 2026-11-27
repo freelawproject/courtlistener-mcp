@@ -18,11 +18,16 @@ class ToolArgumentValidationError(ToolError):
     """Tool arguments failed input-schema validation."""
 
     def __init__(
-        self, message: str, tool_name: str, argument_names: list[str]
+        self,
+        message: str,
+        tool_name: str,
+        argument_names: list[str],
+        error_kind: str = "custom",
     ) -> None:
         super().__init__(message, log_level=logging.WARNING)
         self.tool_name = tool_name
         self.argument_names = argument_names
+        self.error_kind = error_kind
 
 
 class UnauthorizedToolError(ToolError):
@@ -83,13 +88,18 @@ def validation_error_fields(exc: ValidationError) -> list[str]:
     )
 
 
+def validation_error_kinds(exc: ValidationError) -> list[str]:
+    """Pydantic error types that fired, e.g. `missing`, `extra_forbidden`."""
+    return sorted({err["type"] for err in exc.errors()})
+
+
 def before_send(event, hint):
     """Sentry `before_send` hook.
 
     - Drops FastMCP's message-only "Error calling tool" log events.
     - Drops exempt-marked tool errors.
-    - ToolArgumentValidationErrors tagged by tool and arguments.
-    - ValidationErrors tagged by model and fields.
+    - ToolArgumentValidationErrors tagged by tool, arguments, and kind.
+    - ValidationErrors tagged by model, fields, and kind.
     - UnauthorizedToolErrors tagged by tool.
     - UpstreamCourtListenerErrors keyed by status, tagged by tool and status.
     - WikiToolErrors likewise.
@@ -141,6 +151,7 @@ def before_send(event, hint):
             {
                 "tool": exc.tool_name,
                 "field": ",".join(exc.argument_names),
+                "error_kind": exc.error_kind,
             }
         )
     elif isinstance(exc, ValidationError):
@@ -149,6 +160,7 @@ def before_send(event, hint):
             {
                 "model": exc.title,
                 "field": ",".join(validation_error_fields(exc)),
+                "error_kind": ",".join(validation_error_kinds(exc)),
             }
         )
     return event
