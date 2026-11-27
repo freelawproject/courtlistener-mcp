@@ -1,8 +1,11 @@
-from courtlistener.models import ENDPOINTS
 from courtlistener.utils import inline_refs
 from mcp.types import ToolAnnotations
 
-from courtlistener_mcp.lib.schema import endpoint_id_property, prepare_filter
+from courtlistener_mcp.lib.schema import (
+    endpoint_id_property,
+    endpoint_model,
+    prepare_filter,
+)
 from courtlistener_mcp.tools.base import MCPTool
 
 
@@ -38,26 +41,21 @@ class GetEndpointSchemaTool(MCPTool):
 
     async def call(self, arguments: dict) -> dict:
         """Call the get_endpoint_schema tool."""
-        endpoint_id = arguments.get("endpoint_id")
-        for endpoint in ENDPOINTS.values():
-            if endpoint.endpoint_id == endpoint_id:
-                full_schema = endpoint.model_json_schema()
-                defs = full_schema.get("$defs", {})
-                properties = full_schema["properties"]
-                updated_properties = {}
-                for filter_name, filter in properties.items():
-                    if "const" not in filter:
-                        filter = inline_refs(filter, defs)
-                        updated_properties[filter_name] = prepare_filter(
-                            filter,
-                            endpoint_id=endpoint.endpoint_id,
-                            field_name=filter_name,
-                        )
-                schema = {
-                    "type": "object",
-                    "properties": updated_properties,
-                }
-                return schema
-        # Unreachable: the schema's endpoint_id enum is validated in
-        # `MCPTool.run` before dispatch. Guards the fall-through.
-        raise ValueError(f"Endpoint '{endpoint_id}' not found")
+        endpoint_id = arguments["endpoint_id"]
+        endpoint = endpoint_model(endpoint_id)
+        full_schema = endpoint.model_json_schema()
+        defs = full_schema.get("$defs", {})
+        properties = full_schema["properties"]
+        updated_properties = {}
+        for filter_name, filter in properties.items():
+            if "const" not in filter:
+                filter = inline_refs(filter, defs)
+                updated_properties[filter_name] = prepare_filter(
+                    filter,
+                    endpoint_id=endpoint.endpoint_id,
+                    field_name=filter_name,
+                )
+        return {
+            "type": "object",
+            "properties": updated_properties,
+        }

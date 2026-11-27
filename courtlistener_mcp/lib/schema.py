@@ -4,9 +4,27 @@ properties."""
 import json
 from typing import Any, cast
 
-from courtlistener.models import ENDPOINTS
+from courtlistener.models import ENDPOINTS, Endpoint
 
 from courtlistener_mcp.settings import DEFAULT_NUM_RESULTS, MAX_NUM_RESULTS
+
+# The `ENDPOINTS` key (the client attribute) for each endpoint id.
+ENDPOINT_NAMES_BY_ID: dict[str, str] = {
+    endpoint.endpoint_id: name for name, endpoint in ENDPOINTS.items()
+}
+
+
+def endpoint_name(endpoint_id: str) -> str:
+    """The client attribute for *endpoint_id*, e.g. `docket_entries`."""
+    try:
+        return ENDPOINT_NAMES_BY_ID[endpoint_id]
+    except KeyError:
+        raise ValueError(f"Endpoint '{endpoint_id}' not found") from None
+
+
+def endpoint_model(endpoint_id: str) -> type[Endpoint]:
+    """The model class for *endpoint_id*."""
+    return ENDPOINTS[endpoint_name(endpoint_id)]
 
 
 def is_search_endpoint_id(endpoint_id: object) -> bool:
@@ -70,8 +88,7 @@ def is_long_choice_field(endpoint_id: str, field_name: str) -> bool:
 
 def long_choices(field_name: str) -> list[dict]:
     """The full choice list behind a `LONG_CHOICE_FIELDS` entry."""
-    endpoint_id = LONG_CHOICE_FIELDS[field_name][0]
-    model = next(m for m in ENDPOINTS.values() if m.endpoint_id == endpoint_id)
+    model = endpoint_model(LONG_CHOICE_FIELDS[field_name][0])
     extra = model.model_fields[field_name].json_schema_extra
     assert isinstance(extra, dict)  # for mypy
     return cast("list[dict]", extra["choices"])
