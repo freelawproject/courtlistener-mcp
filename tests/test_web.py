@@ -73,6 +73,13 @@ class TestRoutes:
         assert response.headers["content-type"].startswith("text/html")
         assert web.asset_path("css/base.css").read_text() in response.text
 
+    async def test_the_homepage_names_the_root_as_canonical(self, http):
+        response = await http.get("/")
+        assert (
+            '<link rel="canonical" href="https://mcp.courtlistener.com/">'
+            in response.text
+        )
+
     @pytest.mark.parametrize("name", ICONS)
     async def test_serves_each_icon(self, http, name):
         response = await http.get(f"/{name}")
