@@ -17,6 +17,7 @@ Changes:
 
 Fixes:
 - `extract_citations` and `analyze_citations` run eyecite's extraction and resolution in a worker thread (`asyncio.to_thread`) instead of on the event loop. On a long opinion that CPU-bound work stalled every other request on the worker until it finished. Their `text` argument is now limited to 1,000,000 characters (about 300 to 400 pages), since eyecite's time grows with the square of the text's length; longer text gets an error saying to split it.
+- `read_document` (in `cluster_id` mode) and `search_document` no longer turn every exception into an `error` field. Only a document CourtListener doesn't have (a 404) is reported that way, now as "No opinion found with id N." (or "No RECAP document …"), so a cluster read keeps its `cluster_opinions` and a multi-document search keeps the other results. A 401, a 429 or a 5xx raises like in every other tool, so an expired token is dropped from the cache instead of being retried until it expires, upstream failures reach Sentry, and rate limits get the usual `get_api_usage` hint.
 
 ### 1.3.1 - 2026-11-23
 

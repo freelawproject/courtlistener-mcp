@@ -5,6 +5,7 @@ import math
 import re
 
 from courtlistener import AsyncCourtListener
+from courtlistener.exceptions import CourtListenerAPIError
 
 from courtlistener_mcp.session import get_session
 
@@ -35,6 +36,15 @@ async def fetch_document_text(
         await session.store_document(document_type, document_id, text)
 
     return text or None
+
+
+def document_not_found(document_type: str, document_id: int) -> str:
+    """The error a document tool reports for a document CourtListener
+    doesn't have."""
+    label = {"recap_document": "RECAP document"}.get(
+        document_type, document_type
+    )
+    return f"No {label} found with id {document_id}."
 
 
 DEFAULT_CHUNK_SIZE = 8000
@@ -125,15 +135,17 @@ async def search_document_text(
     snippet_size: int,
     client: AsyncCourtListener,
 ) -> dict:
-    """Search one document's text, reporting a failure in an ``error``
-    field instead of raising, so one bad document doesn't sink a batch."""
+    """Search one document's text, reporting a missing document in an
+    ``error`` field instead of raising, so it doesn't sink a batch."""
     # "opinion" -> "opinion_id", "recap_document" -> "recap_document_id"
     result: dict = {f"{document_type}_id": document_id, "query": query}
 
     try:
         text = await fetch_document_text(document_type, document_id, client)
-    except Exception as exc:
-        result["error"] = str(exc)
+    except CourtListenerAPIError as exc:
+        if exc.status_code != 404:
+            raise
+        result["error"] = document_not_found(document_type, document_id)
         return result
 
     if not text:

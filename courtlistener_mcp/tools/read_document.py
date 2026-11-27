@@ -1,8 +1,10 @@
+from courtlistener.exceptions import CourtListenerAPIError
 from mcp.types import ToolAnnotations
 
 from courtlistener_mcp.lib.documents import (
     DEFAULT_CHUNK_SIZE,
     chunk_text,
+    document_not_found,
     fetch_document_text,
 )
 from courtlistener_mcp.tools.base import (
@@ -122,15 +124,14 @@ class ReadDocumentTool(MCPTool):
                 text = await fetch_document_text(
                     document_type, document_id, client
                 )
-            except Exception as exc:
-                # In cluster mode the resolution already succeeded, so
-                # keep the other opinions usable instead of losing them
-                # to a bare error on the first opinion.
-                if cluster_id is None:
+            except CourtListenerAPIError as exc:
+                # In cluster mode the resolution already succeeded, so a
+                # missing main opinion keeps the other opinions usable.
+                if cluster_id is None or exc.status_code != 404:
                     raise
                 return {
                     **ids,
-                    "error": str(exc),
+                    "error": document_not_found(document_type, document_id),
                     "cluster_opinions": cluster_opinions,
                 }
 
