@@ -12,13 +12,14 @@ from key_value.aio.stores.redis import RedisStore
 from key_value.aio.wrappers.encryption import FernetEncryptionWrapper
 
 import courtlistener_mcp.auth.store as storage_mod
+from courtlistener_mcp.settings import settings
 
 pytestmark = pytest.mark.asyncio
 
 
-def _build(**settings):
-    overrides = {"POSTGRES_CONFIGURED": False, "REDIS_URL": None, **settings}
-    with patch.multiple(storage_mod, **overrides):
+def _build(**overrides):
+    overrides = {"pghost": None, "redis_url": None, **overrides}
+    with patch.multiple(settings, **overrides):
         return storage_mod.build_oauth_store()
 
 
@@ -28,13 +29,12 @@ class TestBuildClientStorage:
 
     def test_postgres_holds_the_state_even_with_redis_configured(self):
         store = _build(
-            POSTGRES_CONFIGURED=True,
-            PGHOST="db.example.test",
-            PGPORT=5433,
-            PGDATABASE="mcp",
-            PGUSER="mcp",
-            PGPASSWORD="pa%41ss",
-            REDIS_URL="redis://cache.example.test",
+            pghost="db.example.test",
+            pgport=5433,
+            pgdatabase="mcp",
+            pguser="mcp",
+            pgpassword="pa%41ss",
+            redis_url="redis://cache.example.test",
         )
         primary = store.key_value
         assert isinstance(primary, PostgreSQLStore)
@@ -44,12 +44,12 @@ class TestBuildClientStorage:
         assert primary._password == "pa%41ss"
 
     def test_workers_never_create_the_schema(self):
-        store = _build(POSTGRES_CONFIGURED=True)
+        store = _build(pghost="db.example.test")
         assert isinstance(store.key_value, PostgreSQLStore)
         assert store.key_value._auto_create is False
 
     def test_redis_alone_holds_the_state(self):
-        store = _build(REDIS_URL="redis://cache.example.test")
+        store = _build(redis_url="redis://cache.example.test")
         assert isinstance(store.key_value, RedisStore)
 
     def test_nothing_configured_falls_back_to_memory(self):
@@ -80,7 +80,7 @@ class TestPostgresStorePool:
         create_pool = AsyncMock(return_value="pool")
         with (
             patch.object(storage_mod.asyncpg, "create_pool", new=create_pool),
-            patch.object(storage_mod, "PGPOOL_MAX", 3),
+            patch.object(settings, "pgpool_max", 3),
         ):
             pool = await storage_mod.postgres_store(
                 auto_create=False
@@ -88,7 +88,7 @@ class TestPostgresStorePool:
         assert pool == "pool"
         kwargs = create_pool.await_args.kwargs
         assert (kwargs["min_size"], kwargs["max_size"]) == (1, 3)
-        assert kwargs["host"] == storage_mod.PGHOST
+        assert kwargs["host"] == settings.postgres_host
 
 
 class TestInitSchema:
@@ -178,12 +178,12 @@ class TestStoreReady:
     async def test_connect_passes_the_settings_explicitly(self):
         with (
             patch.multiple(
-                storage_mod,
-                PGHOST="db.example.test",
-                PGPORT=5433,
-                PGUSER="mcp",
-                PGPASSWORD="pa%41ss",
-                PGDATABASE="mcp",
+                settings,
+                pghost="db.example.test",
+                pgport=5433,
+                pguser="mcp",
+                pgpassword="pa%41ss",
+                pgdatabase="mcp",
             ),
             patch.object(
                 storage_mod.asyncpg, "connect", new=AsyncMock()

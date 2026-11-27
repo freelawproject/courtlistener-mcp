@@ -24,6 +24,7 @@ from courtlistener_mcp.session import (
     RedisSession,
     set_session,
 )
+from courtlistener_mcp.settings import settings
 from courtlistener_mcp.tools import MCP_TOOLS
 from courtlistener_mcp.tools.get_counts import GetCountsTool
 
@@ -115,9 +116,9 @@ class TestHttpApp:
     @pytest.fixture
     def app(self):
         with (
-            patch.object(server_mod, "REDIS_URL", "redis://unused"),
-            patch.object(server_mod, "OAUTH_CLIENT_ID", "mcp-client"),
-            patch.object(server_mod, "OAUTH_CLIENT_SECRET", "mcp-secret"),
+            patch.object(settings, "redis_url", "redis://unused"),
+            patch.object(settings, "oauth_client_id", "mcp-client"),
+            patch.object(settings, "oauth_client_secret", "mcp-secret"),
             patch.object(server_mod, "get_oauth_store", MemoryStore),
             patch(
                 "courtlistener_mcp.auth.verifiers.ApiTokenVerifier.check",
@@ -250,9 +251,8 @@ class TestHttpApp:
         ):
             probe.side_effect = None if label == "up" else OSError("refused")
             with (
-                patch.object(server_mod, "POSTGRES_CONFIGURED", True),
-                patch.object(storage_mod, "PGHOST", "db.example.test"),
-                patch.object(storage_mod, "PGPASSWORD", "pa%41ss"),
+                patch.object(settings, "pghost", "db.example.test"),
+                patch.object(settings, "pgpassword", "pa%41ss"),
                 patch.object(storage_mod.asyncpg, "connect", new=connect),
                 patch.object(
                     storage_mod,
@@ -288,7 +288,7 @@ class TestHttpApp:
             get=AsyncMock(side_effect=ValueError("Table does not exist"))
         )
         with (
-            patch.object(server_mod, "POSTGRES_CONFIGURED", True),
+            patch.object(settings, "pghost", "db.example.test"),
             patch.object(
                 storage_mod.asyncpg,
                 "connect",
@@ -319,8 +319,8 @@ class TestHttpApp:
             ("unset", None),
         ):
             with (
-                patch.object(server_mod, "OAUTH_CLIENT_ID", client_id),
-                patch.object(server_mod, "OAUTH_CLIENT_SECRET", "s3cret"),
+                patch.object(settings, "oauth_client_id", client_id),
+                patch.object(settings, "oauth_client_secret", "s3cret"),
             ):
                 async with (
                     app.router.lifespan_context(app),

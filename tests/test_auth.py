@@ -31,7 +31,7 @@ from courtlistener_mcp.session import (
     hmac_hex,
     set_session,
 )
-from courtlistener_mcp.settings import OAUTH_INTROSPECTION_URL
+from courtlistener_mcp.settings import settings
 from courtlistener_mcp.tokens import NO_CLIENT_ID, UNKNOWN_CLIENT_ID, TokenKind
 
 
@@ -153,14 +153,8 @@ class TestVerifyOauthToken:
     @pytest.fixture(autouse=True)
     def client_credentials(self):
         with (
-            patch(
-                "courtlistener_mcp.auth.verifiers.OAUTH_CLIENT_ID",
-                "mcp-client",
-            ),
-            patch(
-                "courtlistener_mcp.auth.verifiers.OAUTH_CLIENT_SECRET",
-                "mcp-secret",
-            ),
+            patch.object(settings, "oauth_client_id", "mcp-client"),
+            patch.object(settings, "oauth_client_secret", "mcp-secret"),
         ):
             yield
 
@@ -181,7 +175,7 @@ class TestVerifyOauthToken:
         client_patch, http = patch_http(http_response(200, {"active": False}))
         with client_patch:
             run(OAuthTokenVerifier().check("tok"))
-        assert http.post.await_args.args[0] == OAUTH_INTROSPECTION_URL
+        assert http.post.await_args.args[0] == settings.oauth_introspection_url
         assert http.post.await_args.kwargs["data"] == {
             "token": "tok",
             "token_type_hint": "access_token",
@@ -252,9 +246,7 @@ class TestVerifyOauthToken:
         client_patch, http = patch_http(http_response(200, ACTIVE))
         with (
             client_patch,
-            patch(
-                "courtlistener_mcp.auth.verifiers.OAUTH_CLIENT_SECRET", None
-            ),
+            patch.object(settings, "oauth_client_secret", None),
         ):
             assert run(OAuthTokenVerifier().check("tok")) is None
         http.post.assert_not_awaited()
@@ -270,9 +262,7 @@ class TestCacheTtl:
                 "courtlistener_mcp.auth.verifiers.time.time",
                 return_value=1_000,
             ),
-            patch(
-                "courtlistener_mcp.auth.verifiers.TOKEN_CACHE_TTL_SECONDS", 600
-            ),
+            patch.object(settings, "token_cache_ttl_seconds", 600),
         ):
             yield
 
@@ -626,14 +616,13 @@ class TestServerAuthWiring:
         )
 
         import courtlistener_mcp.server.main as server_mod
-        import courtlistener_mcp.settings as settings_mod
 
-        assert not hasattr(settings_mod, "MCP_REQUIRE_OAUTH")
+        assert "mcp_require_oauth" not in type(settings).model_fields
         with (
             patch.dict("os.environ", {"MCP_REQUIRE_OAUTH": "false"}),
-            patch.object(server_mod, "REDIS_URL", "redis://localhost:6379"),
-            patch.object(server_mod, "OAUTH_CLIENT_ID", "mcp-client"),
-            patch.object(server_mod, "OAUTH_CLIENT_SECRET", "mcp-secret"),
+            patch.object(settings, "redis_url", "redis://localhost:6379"),
+            patch.object(settings, "oauth_client_id", "mcp-client"),
+            patch.object(settings, "oauth_client_secret", "mcp-secret"),
             patch.object(server_mod, "get_oauth_store", MemoryStore),
         ):
             app = server_mod.create_http_app()
@@ -647,8 +636,8 @@ class TestServerAuthWiring:
         import courtlistener_mcp.server.main as server_mod
 
         with (
-            patch.object(server_mod, "REDIS_URL", "redis://localhost:6379"),
-            patch.object(server_mod, "OAUTH_CLIENT_ID", None),
+            patch.object(settings, "redis_url", "redis://localhost:6379"),
+            patch.object(settings, "oauth_client_id", None),
             pytest.raises(ValueError, match="COURTLISTENER_OAUTH_CLIENT_ID"),
         ):
             server_mod.create_http_app()
@@ -1056,8 +1045,6 @@ class TestCourtListenerOAuthProxy:
 
 def _auth_provider():
     """The proxy create_http_app attaches, built for tests."""
-    from courtlistener_mcp.settings import MCP_BASE_URL
-
     return CourtListenerOAuthProxy(
         upstream_authorization_endpoint="https://example.test/o/authorize/",
         upstream_token_endpoint="https://example.test/o/token/",
@@ -1065,7 +1052,7 @@ def _auth_provider():
         upstream_client_id="mcp-client",
         upstream_client_secret="mcp-secret",
         valid_scopes=["openid", "api"],
-        base_url=MCP_BASE_URL,
+        base_url=settings.mcp_base_url,
         client_storage=MemoryStore(),
         jwt_signing_key="test-signing-key",
     )

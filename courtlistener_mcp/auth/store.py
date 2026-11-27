@@ -16,17 +16,7 @@ from key_value.aio.stores.postgresql import PostgreSQLStore
 from key_value.aio.stores.redis import RedisStore
 from key_value.aio.wrappers.encryption import FernetEncryptionWrapper
 
-from courtlistener_mcp.settings import (
-    MCP_STORAGE_ENCRYPTION_KEY,
-    PGDATABASE,
-    PGHOST,
-    PGPASSWORD,
-    PGPOOL_MAX,
-    PGPORT,
-    PGUSER,
-    POSTGRES_CONFIGURED,
-    REDIS_URL,
-)
+from courtlistener_mcp.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -47,11 +37,11 @@ RETRYABLE_ERRORS = SCHEMA_RACE_ERRORS + TRANSIENT_ERRORS
 def postgres_connect(**kwargs: Any) -> Any:
     """Open an asyncpg connection to the OAuth store database."""
     return asyncpg.connect(
-        host=PGHOST,
-        port=PGPORT,
-        user=PGUSER,
-        password=PGPASSWORD,
-        database=PGDATABASE,
+        host=settings.postgres_host,
+        port=settings.pgport,
+        user=settings.pguser,
+        password=settings.pgpassword,
+        database=settings.pgdatabase,
         **kwargs,
     )
 
@@ -62,24 +52,24 @@ class PostgresStore(PostgreSQLStore):
 
     async def _create_pool(self) -> Any:
         return await asyncpg.create_pool(
-            host=PGHOST,
-            port=PGPORT,
-            database=PGDATABASE,
-            user=PGUSER,
-            password=PGPASSWORD,
+            host=settings.postgres_host,
+            port=settings.pgport,
+            database=settings.pgdatabase,
+            user=settings.pguser,
+            password=settings.pgpassword,
             min_size=1,
-            max_size=PGPOOL_MAX,
+            max_size=settings.pgpool_max,
         )
 
 
 def postgres_store(*, auto_create: bool) -> PostgresStore:
     """The Postgres tier of the OAuth store."""
     return PostgresStore(
-        host=PGHOST,
-        port=PGPORT,
-        database=PGDATABASE,
-        user=PGUSER,
-        password=PGPASSWORD,
+        host=settings.postgres_host,
+        port=settings.pgport,
+        database=settings.pgdatabase,
+        user=settings.pguser,
+        password=settings.pgpassword,
         auto_create=auto_create,
     )
 
@@ -103,13 +93,13 @@ async def postgres_init_schema(attempts: int = 10) -> None:
 def build_oauth_store() -> AsyncKeyValue:
     """The OAuth server's state store: encrypted rows in Postgres."""
     store: AsyncKeyValue
-    if POSTGRES_CONFIGURED:
+    if settings.postgres_configured:
         store = postgres_store(auto_create=False)
-    elif REDIS_URL:
+    elif settings.redis_url:
         logger.warning(
             "PGHOST is not set; OAuth clients and tokens live only in Redis."
         )
-        store = RedisStore(url=REDIS_URL)
+        store = RedisStore(url=settings.redis_url)
     else:
         logger.warning(
             "Neither PGHOST nor REDIS_URL is set; OAuth state is in memory."
@@ -117,7 +107,7 @@ def build_oauth_store() -> AsyncKeyValue:
         store = MemoryStore()
     return FernetEncryptionWrapper(
         store,
-        fernet=Fernet(MCP_STORAGE_ENCRYPTION_KEY),
+        fernet=Fernet(settings.mcp_storage_encryption_key),
         raise_on_decryption_error=False,
     )
 

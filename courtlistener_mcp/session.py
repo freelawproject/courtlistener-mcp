@@ -19,15 +19,13 @@ from courtlistener.settings import get_api_token
 from fastmcp.server.auth.auth import AccessToken
 from fastmcp.server.dependencies import get_access_token
 
-from courtlistener_mcp import settings
 from courtlistener_mcp.settings import (
     ACTIVE_USERS_TTL_SECONDS,
     DOCUMENT_TTL_SECONDS,
-    MCP_SECRET_BYTES,
     REDIS_CONNECT_TIMEOUT_SECONDS,
     REDIS_SOCKET_TIMEOUT_SECONDS,
     SESSION_TTL_SECONDS,
-    TOKEN_CACHE_TTL_SECONDS,
+    settings,
 )
 from courtlistener_mcp.tokens import TokenInfo, TokenKind
 
@@ -42,7 +40,7 @@ def json_default(obj):
 
 def hmac_hex(value: str) -> str:
     return hmac.new(
-        MCP_SECRET_BYTES, value.encode("utf-8"), hashlib.sha256
+        settings.mcp_secret_bytes, value.encode("utf-8"), hashlib.sha256
     ).hexdigest()
 
 
@@ -155,9 +153,11 @@ class Session:
         token: str,
         kind: TokenKind,
         info: TokenInfo,
-        ttl_seconds: int = TOKEN_CACHE_TTL_SECONDS,
+        ttl_seconds: int | None = None,
     ) -> None:
         """Cache the verification of *token* for *ttl_seconds*."""
+        if ttl_seconds is None:
+            ttl_seconds = settings.token_cache_ttl_seconds
         await self._set(
             token_info_key(token, kind), json.dumps(info), ttl_seconds
         )
@@ -302,7 +302,7 @@ def get_session() -> Session:
     """Return the process-wide session store, creating it on first use."""
     global _session
     if _session is None:
-        url = settings.REDIS_URL
+        url = settings.redis_url
         if url:
             _session = RedisSession(url)
         else:

@@ -13,7 +13,7 @@ from courtlistener_mcp.exceptions import (
 from courtlistener_mcp.lib import wiki as wiki_tool
 from courtlistener_mcp.lib.wiki import MISSING_WIKI_SCOPES_MESSAGE
 from courtlistener_mcp.server.middleware import WIKI_TOOL_NAMES
-from courtlistener_mcp.settings import WIKI_BASE_URL
+from courtlistener_mcp.settings import settings
 from courtlistener_mcp.tokens import TokenKind
 from courtlistener_mcp.tools import MCP_TOOLS
 from courtlistener_mcp.tools.wiki_list_pages import WikiListPagesTool
@@ -22,6 +22,7 @@ from courtlistener_mcp.tools.wiki_search import WikiSearchTool
 
 FULL_SCOPES = ["openid", "api", "wiki", "profile", "email"]
 SUMMARY = {"path": "eng/deploys", "title": "Deploys", "description": "…"}
+WIKI_BASE_URL = settings.wiki_base_url
 PAGE_URL = f"{WIKI_BASE_URL}/c/eng/deploys"
 
 # (tool, arguments, the wiki_get call it makes, what the wiki answers)

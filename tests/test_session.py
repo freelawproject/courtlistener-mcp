@@ -29,6 +29,7 @@ from courtlistener_mcp.session import (
 from courtlistener_mcp.settings import (
     REDIS_CONNECT_TIMEOUT_SECONDS,
     REDIS_SOCKET_TIMEOUT_SECONDS,
+    settings,
 )
 from courtlistener_mcp.tokens import TokenKind
 
@@ -222,19 +223,17 @@ class TestSessionDomainMethods:
 
 class TestGetSessionFallback:
     def test_redis_url_set_uses_redis(self):
-        with patch(
-            "courtlistener_mcp.settings.REDIS_URL", "redis://localhost:1"
-        ):
+        with patch.object(settings, "redis_url", "redis://localhost:1"):
             session = get_session()
         assert isinstance(session, RedisSession)
 
     def test_redis_url_unset_falls_back_to_memory(self):
-        with patch("courtlistener_mcp.settings.REDIS_URL", None):
+        with patch.object(settings, "redis_url", None):
             session = get_session()
         assert isinstance(session, InMemorySession)
 
     def test_singleton_is_reused(self):
-        with patch("courtlistener_mcp.settings.REDIS_URL", None):
+        with patch.object(settings, "redis_url", None):
             assert get_session() is get_session()
 
     def test_set_session_overrides(self):
