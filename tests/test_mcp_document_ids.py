@@ -12,10 +12,17 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
+from courtlistener.exceptions import CourtListenerAPIError
 from fastmcp.exceptions import ToolError
 
-from courtlistener_mcp.exceptions import ToolArgumentValidationError
+from courtlistener_mcp.exceptions import (
+    SentryExemptToolError,
+    ToolArgumentValidationError,
+    UnauthorizedToolError,
+    UpstreamCourtListenerError,
+)
 from courtlistener_mcp.lib.opinions import (
     CLUSTER_OPINION_FIELDS,
     add_opinion_ids,
@@ -80,6 +87,13 @@ def in_memory_session():
     set_session(InMemorySession())
     yield
     set_session(None)
+
+
+def api_error(status: int) -> CourtListenerAPIError:
+    """A CourtListener API error with *status*."""
+    return CourtListenerAPIError(
+        status, {"detail": "error"}, httpx.Response(status)
+    )
 
 
 def make_client(
@@ -452,16 +466,96 @@ class TestReadDocumentClusterId:
     def test_schema_accepts_cluster_id(self):
         MCP_TOOLS["read_document"].validate_arguments({"cluster_id": 123})
 
-    def test_fetch_failure_in_cluster_mode_keeps_cluster_opinions(self):
+    def test_missing_opinion_in_cluster_mode_keeps_cluster_opinions(self):
         tool = ReadDocumentTool()
         client = make_client(cluster_opinions={5: [10, 11]})
-        client.opinions.get.side_effect = RuntimeError("HTTP 404: not found")
+        client.opinions.get.side_effect = api_error(404)
         with patch.object(ReadDocumentTool, "get_client", return_value=client):
             result = run(tool.call({"cluster_id": 5}))
         assert result["cluster_id"] == 5
         assert result["opinion_id"] == 10
-        assert result["error"] == "HTTP 404: not found"
+        assert result["error"] == "No opinion found with id 10."
         assert ids(result["cluster_opinions"]) == [10, 11]
+
+    @pytest.mark.parametrize(
+        "status, error",
+        [
+            (401, UnauthorizedToolError),
+            (502, UpstreamCourtListenerError),
+            (429, SentryExemptToolError),
+        ],
+    )
+    def test_other_api_errors_in_cluster_mode_raise(self, status, error):
+        tool = ReadDocumentTool()
+        client = make_client(cluster_opinions={5: [10, 11]})
+        client.opinions.get.side_effect = api_error(status)
+        with (
+            patch.object(ReadDocumentTool, "get_client", return_value=client),
+            pytest.raises(error),
+        ):
+            run(tool.run({"cluster_id": 5}))
+
+    def test_unexpected_errors_in_cluster_mode_raise(self):
+        tool = ReadDocumentTool()
+        client = make_client(cluster_opinions={5: [10, 11]})
+        client.opinions.get.side_effect = RuntimeError("bug")
+        with (
+            patch.object(ReadDocumentTool, "get_client", return_value=client),
+            pytest.raises(RuntimeError, match="bug"),
+        ):
+            run(tool.call({"cluster_id": 5}))
+
+
+class TestSearchDocumentErrors:
+    def test_missing_document_is_reported_per_document(self):
+        tool = SearchDocumentTool()
+        client = make_client()
+
+        async def opinions_get(document_id, fields=None):
+            if document_id == 10:
+                raise api_error(404)
+            return {"html_with_citations": "the securities act"}
+
+        client.opinions.get.side_effect = opinions_get
+        with patch.object(
+            SearchDocumentTool, "get_client", return_value=client
+        ):
+            result = run(
+                tool.call({"opinion_id": [10, 11], "query": "securities"})
+            )
+        missing, found = result["results"]
+        assert missing["error"] == "No opinion found with id 10."
+        assert found["match_count"] == 1
+
+    def test_missing_recap_document_names_it(self):
+        tool = SearchDocumentTool()
+        client = make_client()
+        client.recap_documents.get.side_effect = api_error(404)
+        with patch.object(
+            SearchDocumentTool, "get_client", return_value=client
+        ):
+            result = run(tool.call({"recap_document_id": 7, "query": "x"}))
+        assert result["error"] == "No RECAP document found with id 7."
+
+    @pytest.mark.parametrize(
+        "status, error",
+        [
+            (401, UnauthorizedToolError),
+            (500, UpstreamCourtListenerError),
+            (429, SentryExemptToolError),
+        ],
+    )
+    def test_other_api_errors_raise(self, status, error):
+        tool = SearchDocumentTool()
+        client = make_client()
+        client.opinions.get.side_effect = api_error(status)
+        with (
+            patch.object(
+                SearchDocumentTool, "get_client", return_value=client
+            ),
+            pytest.raises(error),
+        ):
+            run(tool.run({"opinion_id": 10, "query": "x"}))
 
 
 class TestSearchDocumentClusterId:
