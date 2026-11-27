@@ -1,7 +1,7 @@
 """Document text falls back across text fields and reports its source."""
 
 import asyncio
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -137,6 +137,35 @@ class TestTextSourceInResponses:
             result = asyncio.run(ReadDocumentTool().call({"opinion_id": 1}))
         assert "text_source" not in result
         assert result["error"] == "No text is available for this document."
+
+    def test_analyze_citations_verifies_citations_from_fallback_markup(
+        self, monkeypatch
+    ):
+        # The stored citation job is keyed by the user's credential.
+        monkeypatch.setenv("COURTLISTENER_API_TOKEN", "test-token")
+        client = make_client(
+            {
+                "xml_harvard": (
+                    "<opinion><p>As held in Brown v. Board of Education, "
+                    "347 U.S. 483 (1954), segregation is unlawful.</p>"
+                    "</opinion>"
+                )
+            }
+        )
+        client.citation_lookup.lookup_text = AsyncMock(
+            return_value=[{"citation": "347 U.S. 483", "status": 404}]
+        )
+        with patch.object(
+            AnalyzeCitationsTool, "get_client", return_value=client
+        ):
+            output = asyncio.run(
+                AnalyzeCitationsTool().call({"opinion_id": 1})
+            )
+        client.citation_lookup.lookup_text.assert_awaited_once()
+        sent = client.citation_lookup.lookup_text.await_args.args[0]
+        assert "347 U.S. 483" in sent
+        assert output.startswith("Text source: xml_harvard.\n\n")
+        assert "347 U.S. 483" in output
 
     def test_analyze_citations_uses_the_fallback(self):
         client = make_client({"plain_text": "no citations here"})
