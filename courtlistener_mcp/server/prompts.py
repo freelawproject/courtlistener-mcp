@@ -67,7 +67,9 @@ fields from the endpoints directly. These tools cache documents across users,
 support paginated reading by character chunk, and let you grep for snippets
 without loading the whole document. For opinions, they use the
 `html_with_citations` field (the most reliable text source, with inline
-citation markup); for RECAP documents, they use `plain_text`.
+citation markup), falling back to the opinion's other text fields when it
+is empty; for RECAP documents, they use `plain_text`. The `text_source` in
+their responses names the field the text came from.
 
 Opinion ids and cluster ids are separate id-spaces. A search result's
 `cluster_id` is NOT an opinion id — pass the result's top-level `opinion_id`

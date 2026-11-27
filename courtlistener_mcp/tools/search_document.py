@@ -32,6 +32,7 @@ class SearchDocumentTool(MCPTool):
     When ``match_count`` exceeds ``shown``, the first 20
     matches are returned.  Use ``read_document`` with ``chunk_index`` to
     read the area around a match's ``position`` if you need more context.
+    Each result's ``text_source`` names the text field that was searched.
 
     Input should include exactly one of opinion_id, recap_document_id, or cluster_id.
     """

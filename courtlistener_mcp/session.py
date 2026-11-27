@@ -49,6 +49,16 @@ def token_info_key(token: str, kind: TokenKind) -> str:
     return f"mcp:token_info:{kind}:{hmac_hex(token)}"
 
 
+def document_key(document_type: str, document_id: int) -> str:
+    """Cache key for a document's text and the field it came from.
+
+    The ``v2`` keeps these JSON entries apart from the plain-text entries
+    older code cached under ``mcp:doc:{type}:{id}``, so old and new pods
+    sharing Redis during a rolling deploy never read each other's format.
+    """
+    return f"mcp:doc:v2:{document_type}:{document_id}"
+
+
 def active_users_key(credential: str, day: date) -> str:
     """Key of the set of users active on *day* under *credential*."""
     return f"mcp:active:{credential}:{day.isoformat()}"
@@ -126,16 +136,21 @@ class Session:
 
     async def get_document(
         self, document_type: str, document_id: int
-    ) -> str | None:
-        return await self._get(f"mcp:doc:{document_type}:{document_id}")
+    ) -> tuple[str, str] | None:
+        """Return the cached ``(text, text_source)``, or None on a miss."""
+        raw = await self._get(document_key(document_type, document_id))
+        if raw is None:
+            return None
+        cached = json.loads(raw)
+        return cached["text"], cached["text_source"]
 
     async def store_document(
-        self, document_type: str, document_id: int, text: str
+        self, document_type: str, document_id: int, text: str, text_source: str
     ) -> None:
         # Not user-scoped so that fetched documents are shared across users.
         await self._set(
-            f"mcp:doc:{document_type}:{document_id}",
-            text,
+            document_key(document_type, document_id),
+            json.dumps({"text": text, "text_source": text_source}),
             DOCUMENT_TTL_SECONDS,
         )
 

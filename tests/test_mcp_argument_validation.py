@@ -486,7 +486,7 @@ class TestIntegralFloatArguments:
 
         async def fake_fetch(document_type, document_id, client):
             assert document_id == 217512 and type(document_id) is int
-            return "a" * 100 + "b" * 100 + "c" * 50
+            return "a" * 100 + "b" * 100 + "c" * 50, "html_with_citations"
 
         client = MagicMock()
         client.__aenter__.return_value = client

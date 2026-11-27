@@ -21,8 +21,10 @@ class ReadDocumentTool(MCPTool):
 
     Fetches the document text and either returns it in full or as one or
     more paginated chunks.  For opinions, uses the ``html_with_citations``
-    field (the most complete text representation).  For RECAP documents,
-    uses ``plain_text``.
+    field (the most complete text representation), falling back to the
+    opinion's other text fields when it is empty.  For RECAP documents,
+    uses ``plain_text``.  The response's ``text_source`` names the field
+    the text came from.
 
     **Usage patterns**
 
@@ -121,7 +123,7 @@ class ReadDocumentTool(MCPTool):
             )
 
             try:
-                text = await fetch_document_text(
+                fetched = await fetch_document_text(
                     document_type, document_id, client
                 )
             except CourtListenerAPIError as exc:
@@ -139,9 +141,10 @@ class ReadDocumentTool(MCPTool):
         if cluster_opinions:
             result["cluster_opinions"] = cluster_opinions
 
-        if not text:
+        if fetched is None:
             result["error"] = "No text is available for this document."
             return result
 
+        text, result["text_source"] = fetched
         result.update(chunk_text(text, chunk_index, chunk_size))
         return result
