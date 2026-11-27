@@ -133,6 +133,7 @@ class MCPTool(Tool):
                 f"Provide exactly one of {listed}.",
                 tool_name=self.name,
                 argument_names=sorted(names),
+                error_kind="exactly_one_of",
             )
 
     def check_max_length(
@@ -233,7 +234,9 @@ class MCPTool(Tool):
 
         messages = []
         argument_names: set[str] = set()
+        kinds: set[str] = set()
         for error in errors:
+            kinds.add(str(error.validator))
             location = ".".join(str(part) for part in error.path)
             prefix = f"{location}: " if location else ""
             messages.append(f"{prefix}{error.message}")
@@ -257,6 +260,7 @@ class MCPTool(Tool):
             + "\n- ".join(messages),
             tool_name=self.name,
             argument_names=sorted(argument_names),
+            error_kind=",".join(sorted(kinds)),
         )
 
     def resolve_argument_aliases(self, arguments: dict) -> dict:
@@ -276,6 +280,7 @@ class MCPTool(Tool):
                     f"differ; pass only `{canonical}`.",
                     tool_name=self.name,
                     argument_names=sorted([alias, canonical]),
+                    error_kind="alias_conflict",
                 )
             resolved[canonical] = value
         return resolved
@@ -300,7 +305,10 @@ class MCPTool(Tool):
             result = await self.call(arguments)
         except InvalidFieldsError as exc:
             raise ToolArgumentValidationError(
-                str(exc), tool_name=self.name, argument_names=["fields"]
+                str(exc),
+                tool_name=self.name,
+                argument_names=["fields"],
+                error_kind="invalid_fields",
             ) from exc
         except CourtListenerAPIError as exc:
             error = await self.translate_api_error(exc)

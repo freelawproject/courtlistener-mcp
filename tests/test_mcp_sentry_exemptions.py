@@ -176,6 +176,7 @@ class TestRunErrorClassification:
             await _run_tool_raising(error)
         assert excinfo.value.tool_name == "fake_tool"
         assert excinfo.value.argument_names == ["fields"]
+        assert excinfo.value.error_kind == "invalid_fields"
         assert "case_nam" in str(excinfo.value)
 
     @pytest.mark.asyncio
@@ -280,7 +281,16 @@ class TestValidationErrorFingerprint:
         assert result["tags"] == {
             "model": "OpinionSearchEndpoint",
             "field": "court",
+            "error_kind": "value_error",
         }
+
+    def test_error_kind_joins_pydantic_error_types(self):
+        from courtlistener_mcp.exceptions import before_send
+
+        exc = self._validation_error(court="njsupct", bogus=1)
+        event = {}
+        before_send(event, {"exc_info": (type(exc), exc, None)})
+        assert event["tags"]["error_kind"] == "extra_forbidden,value_error"
 
     def test_multiple_fields_join_in_field_tag(self):
         from courtlistener_mcp.exceptions import before_send
@@ -352,7 +362,87 @@ class TestToolArgumentFingerprint:
         result = before_send(event, {"exc_info": (type(exc), exc, None)})
         assert result is event
         assert result["fingerprint"] == ["tool-argument-validation"]
-        assert result["tags"] == {"tool": "search", "field": "query"}
+        assert result["tags"] == {
+            "tool": "search",
+            "field": "query",
+            "error_kind": "additionalProperties",
+        }
+
+    @pytest.mark.parametrize(
+        "tool, arguments, error_kind",
+        [
+            ("get_more_results", {}, "required"),
+            ("search", {"type": "o", "query": {}}, "additionalProperties"),
+            ("get_more_results", {"query_id": 123}, "type"),
+            (
+                "get_more_results",
+                {"query": {}},
+                "additionalProperties,required",
+            ),
+        ],
+    )
+    def test_error_kind_names_the_schema_validators(
+        self, tool, arguments, error_kind
+    ):
+        exc = self._error_for(tool, arguments)
+        assert exc.error_kind == error_kind
+        event = {}
+        before_send(event, {"exc_info": (type(exc), exc, None)})
+        assert event["tags"]["error_kind"] == error_kind
+
+    def test_error_kind_alias_conflict(self):
+        from courtlistener_mcp.exceptions import ToolArgumentValidationError
+        from courtlistener_mcp.tools import MCP_TOOLS
+
+        with pytest.raises(ToolArgumentValidationError) as exc_info:
+            MCP_TOOLS["search"].resolve_argument_aliases(
+                {"q": "privacy", "query": "speech"}
+            )
+        assert exc_info.value.error_kind == "alias_conflict"
+
+    def test_error_kind_exactly_one_of(self):
+        from courtlistener_mcp.exceptions import ToolArgumentValidationError
+        from courtlistener_mcp.tools import MCP_TOOLS
+
+        with pytest.raises(ToolArgumentValidationError) as exc_info:
+            MCP_TOOLS["read_document"].require_one_of(
+                {"opinion_id": 1, "cluster_id": 2}, "opinion_id", "cluster_id"
+            )
+        assert exc_info.value.error_kind == "exactly_one_of"
+
+    def test_error_kind_defaults_to_custom(self):
+        from courtlistener_mcp.exceptions import ToolArgumentValidationError
+
+        exc = ToolArgumentValidationError("m", "t", ["a"])
+        event = {}
+        before_send(event, {"exc_info": (type(exc), exc, None)})
+        assert event["tags"]["error_kind"] == "custom"
+
+    def test_captured_event_carries_error_kind_tag(self):
+        import sentry_sdk
+        from sentry_sdk.transport import Transport
+
+        events = []
+
+        class CapturingTransport(Transport):
+            def capture_envelope(self, envelope):
+                event = envelope.get_event()
+                if event is not None:
+                    events.append(event)
+
+        exc = self._error_for("get_more_results", {})
+        client = sentry_sdk.Client(
+            dsn="https://key@sentry.invalid/1",
+            transport=CapturingTransport,
+            before_send=before_send,
+        )
+        with sentry_sdk.isolation_scope() as scope:
+            scope.set_client(client)
+            scope.capture_exception(exc)
+        client.close()
+        [event] = events
+        assert event["fingerprint"] == ["tool-argument-validation"]
+        assert event["tags"]["error_kind"] == "required"
 
     def test_multiple_arguments_join_in_field_tag(self):
         from courtlistener_mcp.exceptions import before_send

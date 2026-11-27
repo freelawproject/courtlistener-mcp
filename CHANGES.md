@@ -8,6 +8,7 @@ Features:
 -
 
 Changes:
+- Tag validation-error Sentry events with an `error_kind` next to `tool`, `model` and `field`, so they can be grouped and filtered by what went wrong instead of sampling raw messages. Tool argument errors carry the JSON Schema keywords that failed (`required`, `additionalProperties`, `type`, ...) or the name of the check (`alias_conflict`, `exactly_one_of`, `invalid_fields`, `invalid_path`); endpoint model errors carry the pydantic error types (`missing`, `extra_forbidden`, `value_error`, ...). Fingerprints are unchanged.
 - Report the build's commit SHA (`GIT_SHA`, the same value `/health` returns as `version`) to Sentry as the release, so errors can be filtered by build and Sentry can tell which release an issue first appeared or regressed in. Without `GIT_SHA` (local runs, images built without the build arg), the release is left to the Sentry SDK's own guess.
 - Upgrade FastMCP from 4.1.3 to 4.2.6, which brings OAuth proxy security fixes (a refresh token or authorization code can no longer be redeemed twice by concurrent requests, and reusing a rotated refresh token ends the grant) and lets `py-key-value-aio` move to 0.5, with fixes to the Redis store and the encryption wrapper. FastMCP 4.2 needs Python 3.11 or newer, so Python 3.10 is no longer supported.
 - Type-check with Pyrefly instead of mypy, matching CourtListener and the API client. Run it with `uv run pyrefly check`; the CI job is now Pyrefly.

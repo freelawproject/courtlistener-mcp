@@ -90,6 +90,7 @@ class WikiReadPageTool(WikiTool):
             f"Invalid arguments for tool '{self.name}':\n- {message}",
             tool_name=self.name,
             argument_names=["path"],
+            error_kind="invalid_path",
         )
 
     async def call_wiki(self, arguments: dict) -> dict:
