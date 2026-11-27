@@ -1,8 +1,7 @@
-from courtlistener.models import ENDPOINTS
 from mcp.types import ToolAnnotations
 
 from courtlistener_mcp.lib.results import normalize_fields
-from courtlistener_mcp.lib.schema import endpoint_id_property
+from courtlistener_mcp.lib.schema import endpoint_id_property, endpoint_name
 from courtlistener_mcp.tools.base import MCPTool
 
 
@@ -53,17 +52,11 @@ class GetEndpointItemTool(MCPTool):
 
     async def call(self, arguments: dict) -> dict:
         """Call the get_endpoint_item tool."""
-        endpoint_id = arguments.get("endpoint_id")
+        endpoint_id = arguments["endpoint_id"]
         item_id = arguments.get("item_id")
         fields = normalize_fields(arguments.get("fields"))
 
-        for endpoint_name, endpoint in ENDPOINTS.items():
-            if endpoint.endpoint_id == endpoint_id:
-                async with self.get_client() as client:
-                    resource = getattr(client, endpoint_name)
-                    item = await resource.get(item_id, fields=fields)
-                    return item
-
-        # Unreachable: the schema's endpoint_id enum is validated in
-        # `MCPTool.run` before dispatch. Guards the fall-through.
-        raise ValueError(f"Endpoint '{endpoint_id}' not found")
+        resource_name = endpoint_name(endpoint_id)
+        async with self.get_client() as client:
+            resource = getattr(client, resource_name)
+            return await resource.get(item_id, fields=fields)

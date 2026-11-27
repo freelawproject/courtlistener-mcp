@@ -12,6 +12,7 @@ from fastmcp.exceptions import ToolError
 
 from courtlistener_mcp.lib.schema import (
     LONG_CHOICE_FIELDS,
+    endpoint_model,
     is_long_choice_field,
     long_choices,
 )
@@ -52,11 +53,7 @@ class TestLongChoiceCuration:
     def test_curated_entries_exist_and_are_long(self):
         for field_name, endpoint_ids in LONG_CHOICE_FIELDS.items():
             for endpoint_id in endpoint_ids:
-                model = next(
-                    m
-                    for m in ENDPOINTS.values()
-                    if m.endpoint_id == endpoint_id
-                )
+                model = endpoint_model(endpoint_id)
                 extra = model.model_fields[field_name].json_schema_extra
                 assert len(extra["choices"]) > LONG_CHOICE_THRESHOLD, (
                     f"{endpoint_id}.{field_name} no longer needs get_choices"
@@ -68,9 +65,7 @@ class TestLongChoiceCuration:
             value_sets = {
                 frozenset(
                     c["value"]
-                    for c in next(
-                        m for m in ENDPOINTS.values() if m.endpoint_id == eid
-                    )
+                    for c in endpoint_model(eid)
                     .model_fields[field_name]
                     .json_schema_extra["choices"]
                 )

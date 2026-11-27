@@ -5,8 +5,10 @@ from __future__ import annotations
 import asyncio
 import json
 
+import pytest
 from courtlistener.models import ENDPOINTS
 
+from courtlistener_mcp.lib.schema import endpoint_model, endpoint_name
 from courtlistener_mcp.tools import MCP_TOOLS
 
 
@@ -65,3 +67,22 @@ class TestEndpointSchemaOutput:
         """A real column named 'title' must survive (not stripped as noise)."""
         schema = _schema("fjc-integrated-database")
         assert "title" in schema["properties"]
+
+
+class TestEndpointLookup:
+    def test_every_endpoint_is_found_by_id(self):
+        for name, model in ENDPOINTS.items():
+            assert endpoint_name(model.endpoint_id) == name
+            assert endpoint_model(model.endpoint_id) is model
+
+    def test_id_differs_from_client_attribute(self):
+        assert endpoint_name("docket-entries") == "docket_entries"
+
+    @pytest.mark.parametrize(
+        "tool_name",
+        ["call_endpoint", "get_endpoint_item", "get_endpoint_schema"],
+    )
+    def test_unknown_id_raises(self, tool_name):
+        tool = MCP_TOOLS[tool_name]
+        with pytest.raises(ValueError, match="Endpoint 'nope' not found"):
+            asyncio.run(tool.call({"endpoint_id": "nope", "item_id": 1}))
