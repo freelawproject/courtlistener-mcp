@@ -7,7 +7,7 @@ from courtlistener_mcp.exceptions import (
     WikiAPIError,
 )
 from courtlistener_mcp.lib.wiki import tidy_page, wiki_get
-from courtlistener_mcp.settings import WIKI_BASE_URL
+from courtlistener_mcp.settings import settings
 from courtlistener_mcp.tools.base import WikiTool
 
 
@@ -73,7 +73,7 @@ class WikiReadPageTool(WikiTool):
         url = urlsplit(value)
         is_url = bool(url.scheme or url.netloc)
         if is_url and (
-            url.netloc != urlsplit(WIKI_BASE_URL).netloc
+            url.netloc != urlsplit(settings.wiki_base_url).netloc
             or not url.path.startswith("/c/")
         ):
             raise self.invalid_path(f"{value!r} is not a wiki page URL.")

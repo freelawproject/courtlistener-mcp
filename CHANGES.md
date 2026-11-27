@@ -8,6 +8,7 @@ Features:
 -
 
 Changes:
+- Read the environment into one typed settings object (`courtlistener_mcp.settings.settings`, a pydantic-settings `Settings`) instead of module-level `os.getenv` constants. Code reads settings at call time, so tests patch fields on that one object rather than each importing module's copy. Environment variable names and defaults are unchanged; an empty variable now counts as unset for every setting, not just some.
 - `call_endpoint`, `get_endpoint_item`, `get_endpoint_schema` and `get_choices` look endpoints up by id in a mapping built once in `lib/schema` instead of scanning `ENDPOINTS` on every call.
 - Tag validation-error Sentry events with an `error_kind` next to `tool`, `model` and `field`, so they can be grouped and filtered by what went wrong instead of sampling raw messages. Tool argument errors carry the JSON Schema keywords that failed (`required`, `additionalProperties`, `type`, ...) or the name of the check (`alias_conflict`, `exactly_one_of`, `invalid_fields`, `invalid_path`); endpoint model errors carry the pydantic error types (`missing`, `extra_forbidden`, `value_error`, ...). Fingerprints are unchanged.
 - Report the build's commit SHA (`GIT_SHA`, the same value `/health` returns as `version`) to Sentry as the release, so errors can be filtered by build and Sentry can tell which release an issue first appeared or regressed in. Without `GIT_SHA` (local runs, images built without the build arg), the release is left to the Sentry SDK's own guess.

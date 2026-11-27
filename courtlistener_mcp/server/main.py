@@ -33,19 +33,9 @@ from courtlistener_mcp.server.middleware import WikiToolAccess
 from courtlistener_mcp.server.prompts import GLOBAL_INSTRUCTIONS
 from courtlistener_mcp.session import RedisSession, get_session
 from courtlistener_mcp.settings import (
-    GIT_SHA,
-    MCP_BASE_URL,
-    MCP_JWT_SIGNING_KEY,
-    OAUTH_AUTHORIZATION_URL,
-    OAUTH_CLIENT_ID,
-    OAUTH_CLIENT_SECRET,
-    OAUTH_REVOCATION_URL,
-    OAUTH_SCOPES,
-    OAUTH_TOKEN_URL,
     OPENAI_APPS_CHALLENGE_TOKEN,
-    POSTGRES_CONFIGURED,
-    REDIS_URL,
     WIKI_TOOLS_EXCLUDED_CLIENTS,
+    settings,
 )
 from courtlistener_mcp.tools import MCP_TOOLS
 
@@ -104,7 +94,7 @@ def create_mcp_server(auth: AuthProvider | None = None) -> FastMCP:
         if isinstance(session, RedisSession):
             services["redis"] = await session.ping()
 
-        if POSTGRES_CONFIGURED:
+        if settings.postgres_configured:
             try:
                 conn = await postgres_connect(timeout=5)
                 try:
@@ -118,9 +108,11 @@ def create_mcp_server(auth: AuthProvider | None = None) -> FastMCP:
 
         # Temporary sanity check
         config = {
-            "oauth_client": bool(OAUTH_CLIENT_ID and OAUTH_CLIENT_SECRET)
+            "oauth_client": bool(
+                settings.oauth_client_id and settings.oauth_client_secret
+            )
         }
-        if POSTGRES_CONFIGURED:
+        if settings.postgres_configured:
             try:
                 config["oauth_store"] = await asyncio.wait_for(
                     oauth_store_ready(), 5
@@ -131,7 +123,7 @@ def create_mcp_server(auth: AuthProvider | None = None) -> FastMCP:
         return JSONResponse(
             {
                 "status": "healthy" if all(services.values()) else "unhealthy",
-                "version": GIT_SHA,
+                "version": settings.git_sha,
                 "services": services,
                 "config": config,
             }
@@ -147,21 +139,21 @@ def create_mcp_server(auth: AuthProvider | None = None) -> FastMCP:
 
 def create_auth_provider() -> CourtListenerOAuthProxy:
     """The OAuth authorization server fronting CourtListener for MCP clients."""
-    if not (OAUTH_CLIENT_ID and OAUTH_CLIENT_SECRET):
+    if not (settings.oauth_client_id and settings.oauth_client_secret):
         raise ValueError(
             "COURTLISTENER_OAUTH_CLIENT_ID and COURTLISTENER_OAUTH_CLIENT_SECRET "
             "are required for HTTP mode"
         )
     return CourtListenerOAuthProxy(
-        upstream_authorization_endpoint=OAUTH_AUTHORIZATION_URL,
-        upstream_token_endpoint=OAUTH_TOKEN_URL,
-        upstream_revocation_endpoint=OAUTH_REVOCATION_URL,
-        upstream_client_id=OAUTH_CLIENT_ID,
-        upstream_client_secret=OAUTH_CLIENT_SECRET,
-        valid_scopes=OAUTH_SCOPES,
-        base_url=MCP_BASE_URL,
+        upstream_authorization_endpoint=settings.oauth_authorization_url,
+        upstream_token_endpoint=settings.oauth_token_url,
+        upstream_revocation_endpoint=settings.oauth_revocation_url,
+        upstream_client_id=settings.oauth_client_id,
+        upstream_client_secret=settings.oauth_client_secret,
+        valid_scopes=settings.oauth_scopes,
+        base_url=settings.mcp_base_url,
         client_storage=get_oauth_store(),
-        jwt_signing_key=MCP_JWT_SIGNING_KEY,
+        jwt_signing_key=settings.mcp_jwt_signing_key,
     )
 
 
@@ -180,7 +172,7 @@ class McpPathAlias:
 
 
 def create_http_app():
-    if REDIS_URL is None:
+    if settings.redis_url is None:
         raise ValueError("REDIS_URL is required for HTTP mode")
     mcp = create_mcp_server(auth=create_auth_provider())
     middleware = [

@@ -7,6 +7,7 @@ from fastmcp.server.auth.auth import AccessToken
 from courtlistener_mcp.exceptions import WikiAPIError
 from courtlistener_mcp.lib import wiki
 from courtlistener_mcp.lib.wiki import wiki_get
+from courtlistener_mcp.settings import settings
 from courtlistener_mcp.tokens import TokenKind
 
 pytestmark = pytest.mark.asyncio
@@ -42,7 +43,7 @@ async def test_forwards_the_courtlistener_token(monkeypatch):
 
     serve(monkeypatch, handler, access_token(TokenKind.OAUTH))
     assert await wiki_get("pages/") == {"pages": []}
-    assert seen["url"] == f"{wiki.WIKI_BASE_URL}/api/v1/pages/"
+    assert seen["url"] == f"{settings.wiki_base_url}/api/v1/pages/"
     assert seen["auth"] == "Bearer cl-token"
 
 

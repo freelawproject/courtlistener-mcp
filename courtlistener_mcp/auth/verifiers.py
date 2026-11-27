@@ -12,11 +12,8 @@ from fastmcp.server.auth.auth import AccessToken, TokenVerifier
 
 from courtlistener_mcp.session import get_session, hmac_hex
 from courtlistener_mcp.settings import (
-    OAUTH_CLIENT_ID,
-    OAUTH_CLIENT_SECRET,
-    OAUTH_INTROSPECTION_URL,
-    TOKEN_CACHE_TTL_SECONDS,
     VERIFICATION_TIMEOUT_SECONDS,
+    settings,
 )
 from courtlistener_mcp.tokens import (
     NO_CLIENT_ID,
@@ -88,7 +85,7 @@ class OAuthTokenVerifier(CachedTokenVerifier):
 
     async def check(self, token: str) -> TokenInfo | None:
         """Introspect *token* at CourtListener with the server's client credentials."""
-        if not (OAUTH_CLIENT_ID and OAUTH_CLIENT_SECRET):
+        if not (settings.oauth_client_id and settings.oauth_client_secret):
             logger.error(
                 "COURTLISTENER_OAUTH_CLIENT_ID and COURTLISTENER_OAUTH_CLIENT_SECRET "
                 "are required to introspect tokens"
@@ -99,9 +96,12 @@ class OAuthTokenVerifier(CachedTokenVerifier):
                 timeout=VERIFICATION_TIMEOUT_SECONDS
             ) as http:
                 resp = await http.post(
-                    OAUTH_INTROSPECTION_URL,
+                    settings.oauth_introspection_url,
                     data={"token": token, "token_type_hint": "access_token"},
-                    auth=(OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET),
+                    auth=(
+                        settings.oauth_client_id,
+                        settings.oauth_client_secret,
+                    ),
                 )
         except httpx.HTTPError as exc:
             logger.warning("introspection call failed: %s", exc)
@@ -171,5 +171,7 @@ def cache_ttl(info: TokenInfo) -> int:
     """How long to cache *info*: the configured TTL, cut at the token's expiry."""
     expires_at = info.get("expires_at")
     if expires_at is None:
-        return TOKEN_CACHE_TTL_SECONDS
-    return max(1, min(TOKEN_CACHE_TTL_SECONDS, expires_at - int(time.time())))
+        return settings.token_cache_ttl_seconds
+    return max(
+        1, min(settings.token_cache_ttl_seconds, expires_at - int(time.time()))
+    )

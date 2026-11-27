@@ -7,7 +7,7 @@ import httpx
 from fastmcp.server.dependencies import get_access_token
 
 from courtlistener_mcp.exceptions import WikiAPIError
-from courtlistener_mcp.settings import WIKI_BASE_URL, WIKI_SCOPES
+from courtlistener_mcp.settings import WIKI_SCOPES, settings
 from courtlistener_mcp.tokens import TokenKind
 
 
@@ -19,7 +19,7 @@ async def wiki_get(path: str, **params: Any) -> dict:
         headers["Authorization"] = f"Bearer {token.token}"
     try:
         async with httpx.AsyncClient(
-            base_url=WIKI_BASE_URL, timeout=30, follow_redirects=True
+            base_url=settings.wiki_base_url, timeout=30, follow_redirects=True
         ) as http:
             resp = await http.get(
                 f"/api/v1/{path}", params=params, headers=headers
@@ -72,7 +72,7 @@ def missing_wiki_scopes() -> bool:
 
 def wiki_page_url(path: str) -> str:
     """The URL of the wiki page at *path*."""
-    return f"{WIKI_BASE_URL}/c/{path}"
+    return f"{settings.wiki_base_url}/c/{path}"
 
 
 def tidy_page(page: dict) -> dict:
