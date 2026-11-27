@@ -19,9 +19,7 @@ INSECURE_SECRET_KEY = "insecure-do-not-use-in-production"
 class Settings(BaseSettings):
     """The settings that come from environment variables."""
 
-    model_config = SettingsConfigDict(
-        env_ignore_empty=True, validate_by_name=True
-    )
+    model_config = SettingsConfigDict(env_ignore_empty=True)
 
     git_sha: str = "unknown"
 
