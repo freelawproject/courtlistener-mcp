@@ -136,14 +136,22 @@ class TestSessionDomainMethods:
 
     def test_document_cache_roundtrip(self):
         session = InMemorySession()
-        run(session.store_document("opinion", 42, "full text"))
-        assert run(session.get_document("opinion", 42)) == "full text"
+        run(session.store_document("opinion", 42, "full text", "html"))
+        assert run(session.get_document("opinion", 42)) == (
+            "full text",
+            "html",
+        )
 
     def test_document_cache_is_not_user_scoped(self):
         session = InMemorySession()
-        run(session.store_document("opinion", 42, "full text"))
+        run(session.store_document("opinion", 42, "full text", "html"))
         # No client/user involved in the key at all.
-        assert run(session._get("mcp:doc:opinion:42")) == "full text"
+        assert run(session._get("mcp:doc:v2:opinion:42")) is not None
+
+    def test_document_cache_ignores_the_old_plain_text_key(self):
+        session = InMemorySession()
+        run(session._set("mcp:doc:opinion:42", "<p>full text</p>", 60))
+        assert run(session.get_document("opinion", 42)) is None
 
     def test_token_cache_roundtrip_and_invalidate(self):
         session = InMemorySession()

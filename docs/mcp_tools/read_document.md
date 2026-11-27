@@ -5,7 +5,7 @@
 **Read Document**
 
 - **Source:** `courtlistener_mcp/tools/read_document.py`
-- **Estimated definition size:** ~601 tokens (description ~244, input schema ~268; cl100k_base)
+- **Estimated definition size:** ~634 tokens (description ~277, input schema ~268; cl100k_base)
 - **Parameters:** 5 (0 required)
 - **Raw input schema:** [`read_document.inputs.json`](./read_document.inputs.json)
 
@@ -15,8 +15,10 @@ Read the full text of a court opinion or RECAP document.
 
 Fetches the document text and either returns it in full or as one or
 more paginated chunks.  For opinions, uses the ``html_with_citations``
-field (the most complete text representation).  For RECAP documents,
-uses ``plain_text``.
+field (the most complete text representation), falling back to the
+opinion's other text fields when it is empty.  For RECAP documents,
+uses ``plain_text``.  The response's ``text_source`` names the field
+the text came from.
 
 **Usage patterns**
 

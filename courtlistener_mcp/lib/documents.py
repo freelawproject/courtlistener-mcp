@@ -9,16 +9,29 @@ from courtlistener.exceptions import CourtListenerAPIError
 
 from courtlistener_mcp.session import get_session
 
+OPINION_TEXT_FIELDS = [
+    "html_with_citations",
+    "xml_harvard",
+    "xml_scan",
+    "html_columbia",
+    "html_lawbox",
+    "html_anon_2020",
+    "html",
+    "plain_text",
+]
+
+DOCUMENT_TEXT_FIELDS = {
+    "opinion": ("opinions", OPINION_TEXT_FIELDS),
+    "recap_document": ("recap_documents", ["plain_text"]),
+}
+
 
 async def fetch_document_text(
     document_type: str, document_id: int, client: AsyncCourtListener
-) -> str | None:
-    """Return full document text, fetching from the API on cache miss."""
-    document_types = {
-        "opinion": ("opinions", "html_with_citations"),
-        "recap_document": ("recap_documents", "plain_text"),
-    }
-    if document_type not in document_types:
+) -> tuple[str, str] | None:
+    """Return ``(text, text_source)`` from the first non-empty text field,
+    fetching from the API on cache miss; None if every field is empty."""
+    if document_type not in DOCUMENT_TEXT_FIELDS:
         raise ValueError(f"Unknown document_type: {document_type!r}")
 
     session = get_session()
@@ -26,16 +39,20 @@ async def fetch_document_text(
     if cached is not None:
         return cached
 
-    resource_name, field = document_types[document_type]
-    item = await getattr(client, resource_name).get(
-        document_id, fields=[field]
-    )
-    text = item.get(field) or ""
-
-    if text:
-        await session.store_document(document_type, document_id, text)
-
-    return text or None
+    resource_name, fields = DOCUMENT_TEXT_FIELDS[document_type]
+    resource = getattr(client, resource_name)
+    preferred, *fallbacks = fields
+    for batch in ([preferred], fallbacks):
+        if not batch:
+            break
+        item = await resource.get(document_id, fields=batch)
+        for field in batch:
+            if text := item.get(field):
+                await session.store_document(
+                    document_type, document_id, text, field
+                )
+                return text, field
+    return None
 
 
 def document_not_found(document_type: str, document_id: int) -> str:
@@ -141,20 +158,22 @@ async def search_document_text(
     result: dict = {f"{document_type}_id": document_id, "query": query}
 
     try:
-        text = await fetch_document_text(document_type, document_id, client)
+        fetched = await fetch_document_text(document_type, document_id, client)
     except CourtListenerAPIError as exc:
         if exc.status_code != 404:
             raise
         result["error"] = document_not_found(document_type, document_id)
         return result
 
-    if not text:
+    if fetched is None:
         result["error"] = "No text is available for this document."
         return result
 
+    text, text_source = fetched
     match_count, snippets = find_snippets(text, query, snippet_size)
     result.update(
         {
+            "text_source": text_source,
             "total_chars": len(text),
             "match_count": match_count,
             "shown": len(snippets),

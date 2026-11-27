@@ -60,15 +60,16 @@ know the limits before a larger job.
 - If a search result already answers the question, answer from it. Don't fetch
   the full record just to confirm.
 - When you have an ID, use `get_endpoint_item`. It needs no schema lookup first.
-- Document text is cached on the server for 24 hours, so re-reading a document
-  you already opened is cheap. Pagination cursors and citation jobs expire after
+- Document text is cached on the server for an hour, so re-reading a document
+  you just opened is cheap. Pagination cursors and citation jobs expire after
   about an hour of inactivity.
 - `extract_citations` runs on the server without calling the CourtListener API,
   so it doesn't spend quota.
 - One tool call can spend more than one request. The document tools spend one
-  per document, and passing a `cluster_id` costs an extra request to look up the
-  cluster's opinions. Pass the `opinion_id` from the search result when you
-  have it.
+  per document, or two for an opinion whose citation-linked text is missing and
+  they fall back to another text field. Passing a `cluster_id` costs an extra
+  request to look up the cluster's opinions. Pass the `opinion_id` from the
+  search result when you have it.
 
 For anything beyond search and document reading (clusters, docket entries,
 parties, financial disclosures, citation graphs), see

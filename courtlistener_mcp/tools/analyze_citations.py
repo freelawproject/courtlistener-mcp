@@ -6,6 +6,7 @@ from courtlistener_mcp.lib.citation_analysis import (
     MAX_TEXT_LENGTH,
     analyze_text,
 )
+from courtlistener_mcp.lib.documents import fetch_document_text
 from courtlistener_mcp.lib.opinions import (
     describe_opinion,
 )
@@ -113,8 +114,12 @@ class AnalyzeCitationsTool(MCPTool):
                     )
 
             if opinion_id is not None:
-                opinion = await client.opinions.get(opinion_id)
-                text = opinion.get("html_with_citations")
+                fetched = await fetch_document_text(
+                    "opinion", opinion_id, client
+                )
+                text = fetched[0] if fetched else None
+                if fetched:
+                    note += f"Text source: {fetched[1]}.\n\n"
                 if not text:
                     if cluster_id is not None:
                         raise ValueError(

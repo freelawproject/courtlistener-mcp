@@ -649,14 +649,24 @@ class TestDocumentToolOutputKeys:
         client = make_client(opinion_texts={10: "text"})
         with patch.object(ReadDocumentTool, "get_client", return_value=client):
             result = run(ReadDocumentTool().call({"opinion_id": 10}))
-        assert list(result) == ["opinion_id", "total_chars", "text"]
+        assert list(result) == [
+            "opinion_id",
+            "text_source",
+            "total_chars",
+            "text",
+        ]
         assert result["opinion_id"] == 10
 
     def test_read_document_recap_document_id(self):
         client = self.recap_client({20: "text"})
         with patch.object(ReadDocumentTool, "get_client", return_value=client):
             result = run(ReadDocumentTool().call({"recap_document_id": 20}))
-        assert list(result) == ["recap_document_id", "total_chars", "text"]
+        assert list(result) == [
+            "recap_document_id",
+            "text_source",
+            "total_chars",
+            "text",
+        ]
         assert result["recap_document_id"] == 20
 
     def test_read_document_cluster_id(self):
@@ -669,6 +679,7 @@ class TestDocumentToolOutputKeys:
             "cluster_id",
             "opinion_id",
             "cluster_opinions",
+            "text_source",
             "total_chars",
             "text",
         ]
@@ -768,7 +779,9 @@ class TestAnalyzeCitationsClusterId:
             AnalyzeCitationsTool, "get_client", return_value=client
         ):
             output = run(tool.call({"cluster_id": 5}))
-        client.opinions.get.assert_called_once_with(10)
+        client.opinions.get.assert_called_once_with(
+            10, fields=["html_with_citations"]
+        )
         assert "the main opinion of 2 in cluster 5" in output
         assert "opinion_id: 11" in output
         assert "No citations found." in output
@@ -783,7 +796,9 @@ class TestAnalyzeCitationsClusterId:
             AnalyzeCitationsTool, "get_client", return_value=client
         ):
             output = run(tool.call({"cluster_id": 5}))
-        assert output == "No citations found."
+        assert output == (
+            "Text source: html_with_citations.\n\nNo citations found."
+        )
 
     def test_empty_cluster_raises(self):
         tool = AnalyzeCitationsTool()

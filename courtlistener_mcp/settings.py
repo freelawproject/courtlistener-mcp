@@ -170,7 +170,7 @@ WIKI_TOOLS_EXCLUDED_CLIENTS: frozenset[str] = frozenset(
 SESSION_TTL_SECONDS = 3600  # 1 hour
 
 # How long a cached document lives in the session store (shared across users).
-DOCUMENT_TTL_SECONDS = 86400  # 24 hours
+DOCUMENT_TTL_SECONDS = 3600  # 1 hour
 
 # How long each day's active-user set is kept.
 ACTIVE_USERS_TTL_SECONDS = 60 * 86400  # 60 days
